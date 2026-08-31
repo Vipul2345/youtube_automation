@@ -69,75 +69,7 @@ export interface DialogueChunk {
  * Steffan (en-US-SteffanNeural) for secondary male, and Ava (en-US-AvaNeural) for secondary female characters.
  */
 export function parseMultiCharacterDialogue(text: string, defaultVoice: string = 'en-US-GuyNeural'): DialogueChunk[] {
-  const VOICE_PRIMARY_MALE = 'en-US-GuyNeural';
-  const VOICE_PRIMARY_FEMALE = 'en-US-JennyNeural';
-  const VOICE_SECONDARY_MALE = 'en-US-SteffanNeural';
-  const VOICE_SECONDARY_FEMALE = 'en-US-AvaNeural';
-
-  const lowerText = text.toLowerCase();
-  const femaleNarratorIndicators = /\b(my husband|my boyfriend|my dad|my father|my ex-husband|my fiance)\b/;
-  const maleNarratorIndicators = /\b(my wife|my girlfriend|my mom|my mother|my ex-wife|my fiancee)\b/;
-
-  let narratorVoice = VOICE_PRIMARY_MALE;
-  if (femaleNarratorIndicators.test(lowerText) && !maleNarratorIndicators.test(lowerText)) {
-    narratorVoice = VOICE_PRIMARY_FEMALE;
-  }
-
-  if (defaultVoice && !['en-US-GuyNeural', 'en-US-JennyNeural', 'en-US-AnaNeural'].includes(defaultVoice)) {
-    narratorVoice = defaultVoice;
-  }
-
-  // Regex to match quotes or dialogue lines: "..." or '...'
-  const quoteRegex = /(["'][^"']+["']|[^"'\n]+)/g;
-  const matches = text.match(quoteRegex);
-
-  if (!matches || matches.length <= 1) {
-    return [{ text, voice: narratorVoice }];
-  }
-
-  const chunks: DialogueChunk[] = [];
-
-  for (let i = 0; i < matches.length; i++) {
-    const rawChunk = matches[i].trim();
-    if (!rawChunk) continue;
-
-    const isQuote = /^["'].*["']$/.test(rawChunk);
-    if (!isQuote) {
-      chunks.push({ text: rawChunk, voice: narratorVoice });
-      continue;
-    }
-
-    const prevContext = (i > 0 ? matches[i - 1] : '').toLowerCase();
-    const nextContext = (i < matches.length - 1 ? matches[i + 1] : '').toLowerCase();
-    const context = `${prevContext} ${nextContext}`;
-
-    const isFemaleSpeaker = /\b(she|her|wife|girlfriend|mom|mother|sister|girl|woman|lady|waitress|daughter|mrs|ms)\b/.test(context);
-    const isMaleSpeaker = /\b(he|his|him|husband|boyfriend|dad|father|brother|guy|man|cop|officer|manager|waiter|son|mr)\b/.test(context);
-
-    let assignedVoice = narratorVoice;
-
-    if (isFemaleSpeaker && !isMaleSpeaker) {
-      assignedVoice = narratorVoice === VOICE_PRIMARY_FEMALE ? VOICE_SECONDARY_FEMALE : VOICE_PRIMARY_FEMALE;
-    } else if (isMaleSpeaker && !isFemaleSpeaker) {
-      assignedVoice = narratorVoice === VOICE_PRIMARY_MALE ? VOICE_SECONDARY_MALE : VOICE_PRIMARY_MALE;
-    } else {
-      assignedVoice = narratorVoice === VOICE_PRIMARY_MALE ? VOICE_PRIMARY_FEMALE : VOICE_PRIMARY_MALE;
-    }
-
-    chunks.push({ text: rawChunk, voice: assignedVoice });
-  }
-
-  // Merge consecutive chunks sharing the same voice
-  const mergedChunks: DialogueChunk[] = [];
-  for (const chunk of chunks) {
-    if (mergedChunks.length > 0 && mergedChunks[mergedChunks.length - 1].voice === chunk.voice) {
-      mergedChunks[mergedChunks.length - 1].text += ' ' + chunk.text;
-    } else {
-      mergedChunks.push({ ...chunk });
-    }
-  }
-
-  return mergedChunks;
+  return [{ text, voice: 'en-US-GuyNeural' }];
 }
 
 /**
@@ -217,13 +149,13 @@ export async function generateVoiceover(
 
 async function generateEdgeTTS(text: string, outputPath: string, voice: string) {
   try {
-    const ttsVoice = voice && voice !== 'en-US-ChristopherNeural' ? voice : 'en-US-AnaNeural';
+    const ttsVoice = 'en-US-GuyNeural';
     const tts = new EdgeTTS({
       voice: ttsVoice,
       lang: 'en-US',
       outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
       pitch: '+15%',
-      rate: '+50%' // 1.5x fast-paced reciting speed
+      rate: '+25%' // 1.25x natural human speaking rate
     });
 
     await tts.ttsPromise(text, outputPath);

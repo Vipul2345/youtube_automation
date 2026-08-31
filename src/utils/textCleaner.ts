@@ -72,13 +72,16 @@ export function expandContractions(text: string): string {
     [/\bw\/o\b/gi, 'without '],
     [/\bb\/c\b/gi, 'because '],
     [/\bfyi\b/gi, 'for your information'],
-    [/\baka\b/gi, 'also known as'],
+    [/\blet['’]s\b/gi, 'let us'],
     [/\betc\.?\b/gi, 'and so on']
   ];
 
   for (const [regex, replacement] of contractions) {
     t = t.replace(regex, replacement);
   }
+
+  // Universal 's rule: Any word with 's (e.g. person's -> person is, car's -> car is, it's -> it is)
+  t = t.replace(/\b([A-Za-z0-9]+)['’]s\b/gi, '$1 is');
 
   return t;
 }
