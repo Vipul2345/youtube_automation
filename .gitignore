@@ -2,6 +2,7 @@ node_modules/
 dist/
 output/
 temp/
+!temp/posted_stories.json
 .env
 *.mp3
 *.wav

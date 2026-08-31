@@ -169,14 +169,16 @@ export async function fetchRedditStory(
   timeframe: string = 'month',
   index: number = 0
 ): Promise<StoryContent> {
-  // Flatten subreddits for fallback search
+  // Flatten and shuffle subreddits for variety across runs
   const allSubreddits = [
     subreddit,
     ...STORY_SUBREDDITS.life_stories,
     ...STORY_SUBREDDITS.drama,
     ...STORY_SUBREDDITS.revenge,
-    ...STORY_SUBREDDITS.workplace
-  ].filter((v, i, a) => a.indexOf(v) === i);
+    ...STORY_SUBREDDITS.workplace,
+    ...STORY_SUBREDDITS.scary_creepy
+  ].filter((v, i, a) => a.indexOf(v) === i)
+   .sort(() => 0.5 - Math.random());
 
   const token = await getRedditOAuthToken();
   let lastError: Error | null = null;
@@ -247,7 +249,18 @@ export async function fetchRedditStory(
               const rawContent = contentMatch[1];
               const cleanTitle = cleanStoryText(rawTitle);
               const cleanBody = cleanStoryText(rawContent);
-              const postId = idMatch ? idMatch[1].split('/').pop() || `rss_${Date.now()}_${eIdx}` : `rss_${Date.now()}_${eIdx}`;
+
+              let postId = '';
+              if (idMatch && idMatch[1]) {
+                const parts = idMatch[1].split('/').filter(Boolean);
+                const commentIdx = parts.indexOf('comments');
+                if (commentIdx !== -1 && parts[commentIdx + 1]) {
+                  postId = `t3_${parts[commentIdx + 1]}`;
+                }
+              }
+              if (!postId) {
+                postId = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
+              }
 
               // Ensure post is a narrative story (>200 chars) and unread
               if (cleanBody.length >= 200 && cleanBody.length <= 3500 && !isStoryPosted(postId)) {
