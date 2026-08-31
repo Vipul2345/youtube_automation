@@ -69,11 +69,15 @@ export async function uploadToYouTube(
   const { oauth2Client } = getOAuth2Client(pipelineOptions);
   const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
-  const defaultDescription = isShort
-    ? `${description || title}\n\n#Shorts #Storytelling #RedditStories #Viral`
-    : `${description || title}\n\nAutomated Storytelling Video. Subscribe for more!`;
+  const uploadTitle = title.includes('AI Created') || title.includes('AI Generated') 
+    ? title.substring(0, 100) 
+    : `${title} | AI Created`.substring(0, 100);
 
-  const defaultTags = tags || ['shorts', 'reddit', 'storytelling', 'viral', 'animation'];
+  const defaultDescription = isShort
+    ? `${description || title}\n\n🤖 AI Created | Synthetic Audio & Storytelling Video\n\n#Shorts #AICreated #Storytelling #RedditStories #Viral`
+    : `${description || title}\n\n🤖 AI Created | Automated Storytelling Video. Subscribe for more!\n\n#AICreated #RedditStories`;
+
+  const defaultTags = tags || ['shorts', 'reddit', 'storytelling', 'viral', 'animation', 'ai created', 'ai generated', 'synthetic content'];
 
   try {
     const fileSize = fs.statSync(videoPath).size;
@@ -83,7 +87,7 @@ export async function uploadToYouTube(
       part: ['snippet', 'status'],
       requestBody: {
         snippet: {
-          title: title.substring(0, 100),
+          title: uploadTitle,
           description: defaultDescription,
           tags: defaultTags,
           categoryId: '24' // 24 = Entertainment category
