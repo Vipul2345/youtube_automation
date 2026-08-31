@@ -222,8 +222,8 @@ async function generateEdgeTTS(text: string, outputPath: string, voice: string) 
       voice: ttsVoice,
       lang: 'en-US',
       outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-      pitch: '+18%',
-      rate: '+12%'
+      pitch: '+15%',
+      rate: '+50%' // 1.5x fast-paced reciting speed
     });
 
     await tts.ttsPromise(text, outputPath);

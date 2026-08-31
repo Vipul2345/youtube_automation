@@ -22,7 +22,7 @@ interface CacheManifest {
 export function generateContentHash(text: string, voice: string, ttsProvider: string): string {
   return crypto
     .createHash('md5')
-    .update(`${text}_${voice}_${ttsProvider}_multivoice_v1`)
+    .update(`${text}_${voice}_${ttsProvider}_speed15x_v1`)
     .digest('hex');
 }
 

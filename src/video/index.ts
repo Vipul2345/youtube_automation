@@ -80,9 +80,9 @@ export async function composeVideo(input: VideoCompositionInput): Promise<string
   const filterGraph: string[] = [];
   const escapedAssPath = escapeFFmpegPath(assSubtitlePath);
 
-  // Video Filter Graph: Scale, Center-Crop, 20% Dark Tint Overlay, Burn Subtitles
+  // Video Filter Graph: Scale, Center-Crop, 1.5x Video Speedup, 20% Dark Tint Overlay, Burn Subtitles
   const videoFilter = `[1:v]scale=${width}:${height}:force_original_aspect_ratio=increase,` +
-    `crop=${width}:${height},` +
+    `crop=${width}:${height},setpts=PTS/1.5,` +
     `drawbox=y=0:color=black@0.20:width=iw:height=ih:t=fill[vdimmed];` +
     `[vdimmed]subtitles='${escapedAssPath}'[outv]`;
 

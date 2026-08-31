@@ -4,10 +4,10 @@ import axios from 'axios';
 import { execSync } from 'node:child_process';
 import { logger } from '../utils/logger.js';
 
-// High-reliability public HD video stream URLs for automatic background video fetching
+// High-reliability public HD vertical gameplay video stream URLs for background fetching
 const VERIFIED_BACKGROUND_VIDEO_URLS = [
-  'https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4',
-  'https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4'
+  'https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4',
+  'https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4'
 ];
 
 /**
