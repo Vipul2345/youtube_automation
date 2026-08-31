@@ -15,6 +15,53 @@ interface RedditPostData {
   score: number;
   over_18: boolean;
   is_self: boolean;
+  stickied?: boolean;
+}
+
+/**
+ * Rejects non-narrative mod posts, megathreads, 'looking for a post' queries, and pinned announcements.
+ */
+export function isJunkOrMetaThread(title: string, body: string, stickied: boolean = false): boolean {
+  if (stickied) return true;
+
+  const t = title.toLowerCase();
+
+  const junkKeywords = [
+    'looking for a post',
+    'looking_for_a_post',
+    'ask here',
+    'ask_here',
+    'megathread',
+    'meta thread',
+    'discussion thread',
+    'weekly discussion',
+    'monthly discussion',
+    'mod post',
+    'moderator',
+    'subreddit rules',
+    'welcome to',
+    'frequently asked',
+    'read before posting',
+    'submit your',
+    'recommendation thread',
+    'simple questions',
+    'general discussion',
+    'monthly post',
+    'weekly thread',
+    'nomination',
+    'community update',
+    'official thread'
+  ];
+
+  for (const kw of junkKeywords) {
+    if (t.includes(kw)) return true;
+  }
+
+  if (t.startsWith('looking for') || t.startsWith('ask here') || t.startsWith('[meta]') || t.includes('find a post')) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -262,8 +309,8 @@ export async function fetchRedditStory(
                 postId = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
               }
 
-              // Ensure post is a narrative story (>200 chars) and unread
-              if (cleanBody.length >= 200 && cleanBody.length <= 3500 && !isStoryPosted(postId)) {
+              // Ensure post is a real narrative story (>250 chars) and not a mod megathread
+              if (cleanBody.length >= 250 && cleanBody.length <= 3500 && !isStoryPosted(postId) && !isJunkOrMetaThread(cleanTitle, cleanBody)) {
                 markStoryPosted(postId);
                 logger.success(`🎉 FETCHED HIGH-QUALITY STORY: "${cleanTitle}" (r/${sub})`);
                 const fullRawText = `${cleanTitle}\n\n${cleanBody}`;
@@ -294,11 +341,13 @@ export async function fetchRedditStory(
           .filter((post: RedditPostData) => 
             post.is_self && 
             post.selftext && 
+            !post.stickied &&
             post.selftext !== '[removed]' &&
             post.selftext !== '[deleted]' &&
-            post.selftext.length >= 200 && 
+            post.selftext.length >= 250 && 
             post.selftext.length <= 3500 &&
-            !isStoryPosted(post.id)
+            !isStoryPosted(post.id) &&
+            !isJunkOrMetaThread(post.title, post.selftext, post.stickied)
           );
 
         if (validPosts.length === 0) {
@@ -343,8 +392,11 @@ export async function fetchRedditStory(
         const validPosts = posts.filter((post: any) => 
           post.is_self && 
           post.selftext && 
-          post.selftext.length >= 100 && 
-          !isStoryPosted(post.id)
+          !post.stickied &&
+          post.selftext.length >= 250 && 
+          post.selftext.length <= 3500 &&
+          !isStoryPosted(post.id) &&
+          !isJunkOrMetaThread(post.title || '', post.selftext || '', post.stickied)
         );
 
         if (validPosts.length > 0) {
