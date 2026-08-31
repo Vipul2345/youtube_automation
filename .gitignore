@@ -6,6 +6,7 @@ temp/
 *.mp3
 *.wav
 *.mp4
+!assets/backgrounds/*.mp4
 *.srt
 *.ass
 .DS_Store

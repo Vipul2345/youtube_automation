@@ -45,7 +45,7 @@ export async function runSingleStoryPipeline(options: PipelineOptions): Promise<
         videoPath: finalVideoPath,
         title: story.title,
         description: story.cleanedText.substring(0, 500),
-        privacyStatus: 'private',
+        privacyStatus: 'public',
         isShort: options.ratio === '9:16'
       },
       options

@@ -53,7 +53,7 @@ export async function uploadToYouTube(
   uploadOptions: YouTubeUploadOptions,
   pipelineOptions: PipelineOptions
 ): Promise<string> {
-  const { videoPath, title, description, tags, privacyStatus = 'private', isShort = true } = uploadOptions;
+  const { videoPath, title, description, tags, privacyStatus = 'public', isShort = true } = uploadOptions;
 
   if (!fs.existsSync(videoPath)) {
     throw new Error(`Video file for YouTube upload not found at: ${videoPath}`);
