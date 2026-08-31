@@ -14,7 +14,7 @@ export function parseCLIConfig(argv: string[] = process.argv): PipelineOptions {
     .version('2.0.0')
     .option('--story <id_or_name>', 'Story ID or filename inside /content/stories/ (e.g. tifu_mountain_spirit)')
     .option('-s, --source <source>', 'Source type: "reddit", "local", or "story-id"', 'reddit')
-    .option('-sub, --subreddit <name>', 'Subreddit name to fetch stories from', 'AskReddit')
+    .option('-sub, --subreddit <name>', 'Subreddit name to fetch stories from', 'stories')
     .option('-t, --timeframe <timeframe>', 'Reddit timeframe: "day", "week", "month", "year", "all"', 'week')
     .option('-c, --count <number>', 'Number of stories to batch process from Reddit', '1')
     .option('-f, --file <path>', 'Explicit path to local text, JSON, or Excel (.xlsx/.csv) story file')
@@ -60,8 +60,8 @@ export function parseCLIConfig(argv: string[] = process.argv): PipelineOptions {
   return {
     storyId,
     source,
-    subreddit: opts.subreddit || 'AskReddit',
-    timeframe: opts.timeframe || 'week',
+    subreddit: opts.subreddit || 'stories',
+    timeframe: opts.timeframe || 'month',
     limit: parseInt(opts.count, 10) || 1,
     count: parseInt(opts.count, 10) || 1,
     file: opts.file,

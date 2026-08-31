@@ -156,26 +156,32 @@ async function getRedditOAuthToken(): Promise<string | null> {
   return null;
 }
 
+export const STORY_SUBREDDITS = {
+  drama: ['AmItheAsshole', 'relationship_advice', 'confessions', 'offmychest'],
+  revenge: ['ProRevenge', 'MaliciousCompliance', 'SupernaturalRevenge'],
+  workplace: ['TalesFromRetail', 'TalesFromYourServer', 'talesfromtechsupport'],
+  life_stories: ['tifu', 'stories', 'BestofRedditorUpdates'],
+  scary_creepy: ['LetsNotMeet', 'nosleep', 'Glitch_in_the_Matrix']
+};
+
 export async function fetchRedditStory(
-  subreddit: string = 'tifu',
-  timeframe: string = 'week',
+  subreddit: string = 'stories',
+  timeframe: string = 'month',
   index: number = 0
 ): Promise<StoryContent> {
-  const funnySubreddits = [
+  // Flatten subreddits for fallback search
+  const allSubreddits = [
     subreddit,
-    'tifu',
-    'AskReddit',
-    'confession',
-    'AmItheAsshole',
-    'funny',
-    'stories',
-    'copypasta'
+    ...STORY_SUBREDDITS.life_stories,
+    ...STORY_SUBREDDITS.drama,
+    ...STORY_SUBREDDITS.revenge,
+    ...STORY_SUBREDDITS.workplace
   ].filter((v, i, a) => a.indexOf(v) === i);
 
   const token = await getRedditOAuthToken();
   let lastError: Error | null = null;
 
-  for (const sub of funnySubreddits) {
+  for (const sub of allSubreddits) {
     const urls: { url: string; headers: Record<string, string> }[] = [];
 
     if (token) {
@@ -186,16 +192,26 @@ export async function fetchRedditStory(
           'User-Agent': 'RedditStoryVideoGenerator/2.0.0 (by /u/AutomatedVideoBot)'
         }
       });
-      urls.push({
-        url: `https://oauth.reddit.com/r/${sub}/hot?limit=50`,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'User-Agent': 'RedditStoryVideoGenerator/2.0.0 (by /u/AutomatedVideoBot)'
-        }
-      });
     }
 
     const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${120 + Math.floor(Math.random() * 5)}.0.0.${Math.floor(Math.random() * 100)} Safari/537.36`;
+
+    // Public JSON Endpoints (with limit=50, timeframe=month/year for top quality)
+    urls.push({
+      url: `https://www.reddit.com/r/${sub}/top.json?limit=50&t=${timeframe}`,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+    urls.push({
+      url: `https://old.reddit.com/r/${sub}/hot.json?limit=50`,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'application/json'
+      }
+    });
 
     // Reddit RSS Atom Feed Endpoint (bypasses 429 rate limits)
     urls.push({
@@ -206,24 +222,7 @@ export async function fetchRedditStory(
       }
     });
 
-    // Public JSON Endpoints (with randomized desktop User-Agent headers)
-    urls.push({
-      url: `https://www.reddit.com/r/${sub}/top.json?limit=30&t=${timeframe}`,
-      headers: {
-        'User-Agent': userAgent,
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    urls.push({
-      url: `https://old.reddit.com/r/${sub}/hot.json?limit=30`,
-      headers: {
-        'User-Agent': userAgent,
-        'Accept': 'application/json'
-      }
-    });
-
-    logger.info(`Fetching fresh funny stories from r/${sub} online...`);
+    logger.info(`Fetching top-quality stories from r/${sub} (timeframe: ${timeframe}, limit: 50)...`);
 
     for (const item of urls) {
       try {
@@ -244,21 +243,23 @@ export async function fetchRedditStory(
             const idMatch = entry.match(/<id>([^<]+)<\/id>/);
 
             if (titleMatch && contentMatch) {
-              const postTitle = titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-              const rawHtml = contentMatch[1];
-              const bodyText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
+              const rawTitle = titleMatch[1];
+              const rawContent = contentMatch[1];
+              const cleanTitle = cleanStoryText(rawTitle);
+              const cleanBody = cleanStoryText(rawContent);
               const postId = idMatch ? idMatch[1].split('/').pop() || `rss_${Date.now()}_${eIdx}` : `rss_${Date.now()}_${eIdx}`;
 
-              if (bodyText.length >= 80 && !isStoryPosted(postId)) {
+              // Ensure post is a narrative story (>200 chars) and unread
+              if (cleanBody.length >= 200 && cleanBody.length <= 3500 && !isStoryPosted(postId)) {
                 markStoryPosted(postId);
-                logger.success(`🎉 FETCHED FRESH REDDIT STORY (via RSS): "${postTitle}" (r/${sub})`);
-                const fullRawText = `${postTitle}\n\n${bodyText}`;
+                logger.success(`🎉 FETCHED HIGH-QUALITY STORY: "${cleanTitle}" (r/${sub})`);
+                const fullRawText = `${cleanTitle}\n\n${cleanBody}`;
                 return {
                   id: `reddit_${postId}`,
-                  title: postTitle,
-                  body: bodyText,
+                  title: cleanTitle,
+                  body: cleanBody,
                   fullRawText,
-                  cleanedText: cleanStoryText(fullRawText),
+                  cleanedText: fullRawText,
                   author: 'RedditUser',
                   subreddit: sub,
                   url: `https://reddit.com/r/${sub}`,
@@ -280,7 +281,10 @@ export async function fetchRedditStory(
           .filter((post: RedditPostData) => 
             post.is_self && 
             post.selftext && 
-            post.selftext.length >= 100 && 
+            post.selftext !== '[removed]' &&
+            post.selftext !== '[deleted]' &&
+            post.selftext.length >= 200 && 
+            post.selftext.length <= 3500 &&
             !isStoryPosted(post.id)
           );
 
@@ -291,18 +295,20 @@ export async function fetchRedditStory(
         const postIndex = Math.min(Math.max(0, index), validPosts.length - 1);
         const selectedPost = validPosts[postIndex] || validPosts[0];
 
-        markStoryPosted(selectedPost.id);
-        logger.success(`🎉 FETCHED NEW FUNNY REDDIT STORY: "${selectedPost.title}" by u/${selectedPost.author} (r/${selectedPost.subreddit}, Score: ${selectedPost.score})`);
+        const cleanTitle = cleanStoryText(selectedPost.title);
+        const cleanBody = cleanStoryText(selectedPost.selftext || '');
 
-        const fullRawText = `${selectedPost.title}\n\n${selectedPost.selftext || ''}`;
-        const cleanedText = cleanStoryText(fullRawText);
+        markStoryPosted(selectedPost.id);
+        logger.success(`🎉 FETCHED HIGH-QUALITY STORY: "${cleanTitle}" by u/${selectedPost.author} (r/${selectedPost.subreddit}, Score: ${selectedPost.score})`);
+
+        const fullCleanText = `${cleanTitle}\n\n${cleanBody}`;
 
         return {
           id: `reddit_${selectedPost.id}`,
-          title: selectedPost.title,
-          body: selectedPost.selftext || '',
-          fullRawText,
-          cleanedText,
+          title: cleanTitle,
+          body: cleanBody,
+          fullRawText: fullCleanText,
+          cleanedText: fullCleanText,
           author: selectedPost.author,
           subreddit: selectedPost.subreddit,
           url: `https://reddit.com${selectedPost.url}`,

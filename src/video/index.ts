@@ -82,7 +82,7 @@ export async function composeVideo(input: VideoCompositionInput): Promise<string
 
   // Video Filter Graph: Scale, Center-Crop, 1.5x Video Speedup, 20% Dark Tint Overlay, Burn Subtitles
   const videoFilter = `[1:v]scale=${width}:${height}:force_original_aspect_ratio=increase,` +
-    `crop=${width}:${height},setpts=PTS/1.5,` +
+    `crop=${width}:${height},setpts=PTS/1.25,` +
     `drawbox=y=0:color=black@0.20:width=iw:height=ih:t=fill[vdimmed];` +
     `[vdimmed]subtitles='${escapedAssPath}'[outv]`;
 

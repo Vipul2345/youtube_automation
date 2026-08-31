@@ -20,7 +20,7 @@ async function runDailyAutomation() {
   const dailyOptions: PipelineOptions = {
     ...baseConfig,
     source: 'reddit',
-    subreddit: baseConfig.subreddit || 'AskReddit',
+    subreddit: baseConfig.subreddit || 'stories',
     ratio: '9:16',
     voice: baseConfig.voice || 'en-US-GuyNeural',
     tts: baseConfig.tts || 'edge-tts',
