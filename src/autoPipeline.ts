@@ -24,7 +24,7 @@ async function runDailyAutomation() {
     ratio: '9:16',
     voice: baseConfig.voice || 'en-US-GuyNeural',
     tts: baseConfig.tts || 'edge-tts',
-    uploadYoutube: baseConfig.uploadYoutube || Boolean(process.env.YOUTUBE_REFRESH_TOKEN)
+    uploadYoutube: baseConfig.uploadYoutube ?? true
   };
 
   logger.info(`Starting Daily Automation Run...`);

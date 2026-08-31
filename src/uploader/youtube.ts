@@ -12,7 +12,8 @@ const SCOPES = ['https://www.googleapis.com/auth/youtube.upload'];
 function getOAuth2Client(options: PipelineOptions) {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  const redirectUri = process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:3000/oauth2callback';
+  const redirectUri = process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:8080';
+  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret) {
     throw new Error(
@@ -23,17 +24,14 @@ function getOAuth2Client(options: PipelineOptions) {
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
   const tokenPath = path.join(options.tempDir || path.join(process.cwd(), 'temp'), 'youtube_tokens.json');
 
-  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
-
   if (refreshToken) {
-    logger.info(`Authenticating YouTube API via YOUTUBE_REFRESH_TOKEN environment variable...`);
+    logger.info(`Authenticating YouTube API via YOUTUBE_REFRESH_TOKEN...`);
     oauth2Client.setCredentials({ refresh_token: refreshToken });
   } else if (fs.existsSync(tokenPath)) {
     const tokens = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
     oauth2Client.setCredentials(tokens);
   } else {
     logger.warn(`No YouTube OAuth2 tokens found at ${tokenPath} and YOUTUBE_REFRESH_TOKEN is not set.`);
-    logger.warn(`To authorize YouTube upload access, set YOUTUBE_REFRESH_TOKEN in your secrets or generate youtube_tokens.json.`);
   }
 
   return { oauth2Client, tokenPath };
