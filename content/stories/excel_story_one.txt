@@ -1,3 +1,0 @@
-excel_story_one
-
-This is story one from the Excel spreadsheet. It describes a wild mountain adventure where everything went wrong.

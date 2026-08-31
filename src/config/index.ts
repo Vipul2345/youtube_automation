@@ -13,7 +13,7 @@ export function parseCLIConfig(argv: string[] = process.argv): PipelineOptions {
     .description('Parameter-driven automated video generation framework (supports Excel / JSON batching & single stories)')
     .version('2.0.0')
     .option('--story <id_or_name>', 'Story ID or filename inside /content/stories/ (e.g. tifu_mountain_spirit)')
-    .option('-s, --source <source>', 'Source type: "reddit", "local", or "story-id"', 'story-id')
+    .option('-s, --source <source>', 'Source type: "reddit", "local", or "story-id"', 'reddit')
     .option('-sub, --subreddit <name>', 'Subreddit name to fetch stories from', 'AskReddit')
     .option('-t, --timeframe <timeframe>', 'Reddit timeframe: "day", "week", "month", "year", "all"', 'week')
     .option('-c, --count <number>', 'Number of stories to batch process from Reddit', '1')

@@ -109,32 +109,166 @@ export function fetchLocalStory(filePath?: string): StoryContent {
 
 import { isStoryPosted, markStoryPosted } from './tracker.js';
 
+/**
+ * Attempts to obtain an official Reddit OAuth2 Access Token if credentials exist in .env.
+ */
+async function getRedditOAuthToken(): Promise<string | null> {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  try {
+    logger.info(`Authenticating with Reddit API via OAuth2 (Client ID: ${clientId.slice(0, 5)}...)...`);
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const params = new URLSearchParams();
+
+    if (username && password) {
+      params.append('grant_type', 'password');
+      params.append('username', username);
+      params.append('password', password);
+    } else {
+      params.append('grant_type', 'client_credentials');
+    }
+
+    const response = await axios.post('https://www.reddit.com/api/v1/access_token', params.toString(), {
+      headers: {
+        'Authorization': `Basic ${authHeader}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'RedditStoryVideoGenerator/2.0.0 (by /u/AutomatedVideoBot)'
+      },
+      timeout: 10000
+    });
+
+    const token = response.data?.access_token;
+    if (token) {
+      logger.success(`Reddit OAuth2 Token acquired successfully!`);
+      return token;
+    }
+  } catch (err: any) {
+    logger.warn(`Reddit OAuth2 authentication failed: ${err.message}. Falling back to public JSON endpoints.`);
+  }
+
+  return null;
+}
+
 export async function fetchRedditStory(
-  subreddit: string,
+  subreddit: string = 'tifu',
   timeframe: string = 'week',
   index: number = 0
 ): Promise<StoryContent> {
-  const subreddits = [subreddit, 'AskReddit', 'tifu', 'confession', 'AmItheAsshole', 'stories'];
+  const funnySubreddits = [
+    subreddit,
+    'tifu',
+    'AskReddit',
+    'confession',
+    'AmItheAsshole',
+    'funny',
+    'stories',
+    'copypasta'
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  const token = await getRedditOAuthToken();
   let lastError: Error | null = null;
 
-  for (const sub of subreddits) {
-    const endpoints = [
-      `https://www.reddit.com/r/${sub}/top.json?limit=30&t=${timeframe}`,
-      `https://old.reddit.com/r/${sub}/top.json?limit=30&t=${timeframe}`
-    ];
+  for (const sub of funnySubreddits) {
+    const urls: { url: string; headers: Record<string, string> }[] = [];
 
-    logger.info(`Fetching top stories from r/${sub} (timeframe: ${timeframe})...`);
+    if (token) {
+      urls.push({
+        url: `https://oauth.reddit.com/r/${sub}/top?limit=50&t=${timeframe}`,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'User-Agent': 'RedditStoryVideoGenerator/2.0.0 (by /u/AutomatedVideoBot)'
+        }
+      });
+      urls.push({
+        url: `https://oauth.reddit.com/r/${sub}/hot?limit=50`,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'User-Agent': 'RedditStoryVideoGenerator/2.0.0 (by /u/AutomatedVideoBot)'
+        }
+      });
+    }
 
-    for (const url of endpoints) {
+    const userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${120 + Math.floor(Math.random() * 5)}.0.0.${Math.floor(Math.random() * 100)} Safari/537.36`;
+
+    // Reddit RSS Atom Feed Endpoint (bypasses 429 rate limits)
+    urls.push({
+      url: `https://www.reddit.com/r/${sub}/hot.rss`,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+
+    // Public JSON Endpoints (with randomized desktop User-Agent headers)
+    urls.push({
+      url: `https://www.reddit.com/r/${sub}/top.json?limit=30&t=${timeframe}`,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+    urls.push({
+      url: `https://old.reddit.com/r/${sub}/hot.json?limit=30`,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': 'application/json'
+      }
+    });
+
+    logger.info(`Fetching fresh funny stories from r/${sub} online...`);
+
+    for (const item of urls) {
       try {
-        const response = await axios.get(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9'
-          },
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        const response = await axios.get(item.url, {
+          headers: item.headers,
           timeout: 10000
         });
+
+        if (item.url.endsWith('.rss')) {
+          const xml = String(response.data || '');
+          const entries = xml.split('<entry>');
+          for (let eIdx = 1; eIdx < entries.length; eIdx++) {
+            const entry = entries[eIdx];
+            const titleMatch = entry.match(/<title>([^<]+)<\/title>/);
+            const contentMatch = entry.match(/<content[^>]*>([\s\S]*?)<\/content>/);
+            const idMatch = entry.match(/<id>([^<]+)<\/id>/);
+
+            if (titleMatch && contentMatch) {
+              const postTitle = titleMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+              const rawHtml = contentMatch[1];
+              const bodyText = rawHtml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
+              const postId = idMatch ? idMatch[1].split('/').pop() || `rss_${Date.now()}_${eIdx}` : `rss_${Date.now()}_${eIdx}`;
+
+              if (bodyText.length >= 80 && !isStoryPosted(postId)) {
+                markStoryPosted(postId);
+                logger.success(`🎉 FETCHED FRESH REDDIT STORY (via RSS): "${postTitle}" (r/${sub})`);
+                const fullRawText = `${postTitle}\n\n${bodyText}`;
+                return {
+                  id: `reddit_${postId}`,
+                  title: postTitle,
+                  body: bodyText,
+                  fullRawText,
+                  cleanedText: cleanStoryText(fullRawText),
+                  author: 'RedditUser',
+                  subreddit: sub,
+                  url: `https://reddit.com/r/${sub}`,
+                  score: 500
+                };
+              }
+            }
+          }
+          continue;
+        }
 
         const posts = response.data?.data?.children;
         if (!posts || !Array.isArray(posts) || posts.length === 0) {
@@ -143,7 +277,12 @@ export async function fetchRedditStory(
 
         const validPosts = posts
           .map((child: any) => child.data as RedditPostData)
-          .filter((post: RedditPostData) => post.is_self && post.selftext && post.selftext.length > 50 && !isStoryPosted(post.id));
+          .filter((post: RedditPostData) => 
+            post.is_self && 
+            post.selftext && 
+            post.selftext.length >= 100 && 
+            !isStoryPosted(post.id)
+          );
 
         if (validPosts.length === 0) {
           continue;
@@ -153,7 +292,7 @@ export async function fetchRedditStory(
         const selectedPost = validPosts[postIndex] || validPosts[0];
 
         markStoryPosted(selectedPost.id);
-        logger.success(`Fetched fresh new post: "${selectedPost.title}" by u/${selectedPost.author} (Score: ${selectedPost.score})`);
+        logger.success(`🎉 FETCHED NEW FUNNY REDDIT STORY: "${selectedPost.title}" by u/${selectedPost.author} (r/${selectedPost.subreddit}, Score: ${selectedPost.score})`);
 
         const fullRawText = `${selectedPost.title}\n\n${selectedPost.selftext || ''}`;
         const cleanedText = cleanStoryText(fullRawText);
@@ -173,8 +312,47 @@ export async function fetchRedditStory(
         lastError = err;
       }
     }
+
+    // Attempt PullPush Reddit Archive API (unauthenticated public API endpoint)
+    try {
+      logger.info(`Fetching live stories from PullPush API for r/${sub}...`);
+      const pullpushUrl = `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=30&sort=desc`;
+      const response = await axios.get(pullpushUrl, { timeout: 10000 });
+      const posts = response.data?.data;
+
+      if (posts && Array.isArray(posts) && posts.length > 0) {
+        const validPosts = posts.filter((post: any) => 
+          post.is_self && 
+          post.selftext && 
+          post.selftext.length >= 100 && 
+          !isStoryPosted(post.id)
+        );
+
+        if (validPosts.length > 0) {
+          const selectedPost = validPosts[0];
+          markStoryPosted(selectedPost.id);
+          logger.success(`🎉 FETCHED NEW FUNNY REDDIT STORY (via PullPush): "${selectedPost.title}" by u/${selectedPost.author} (r/${selectedPost.subreddit})`);
+
+          const fullRawText = `${selectedPost.title}\n\n${selectedPost.selftext || ''}`;
+          const cleanedText = cleanStoryText(fullRawText);
+
+          return {
+            id: `reddit_${selectedPost.id}`,
+            title: selectedPost.title,
+            body: selectedPost.selftext || '',
+            fullRawText,
+            cleanedText,
+            author: selectedPost.author || 'RedditUser',
+            subreddit: selectedPost.subreddit || sub,
+            url: `https://reddit.com${selectedPost.permalink || ''}`,
+            score: selectedPost.score || 100
+          };
+        }
+      }
+    } catch (err: any) {
+      lastError = err;
+    }
   }
 
-  logger.warn(`Reddit API query blocked or unavailable (${lastError?.message}). Falling back to local sample story.`);
-  return fetchStoryById('tifu_mountain_spirit', path.join(process.cwd(), 'content', 'stories'));
+  throw new Error(`[FETCH FAILED] Could not fetch a fresh unread story online from Reddit (${lastError?.message}). Please check network connectivity or add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET to your .env file.`);
 }
