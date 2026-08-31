@@ -2,8 +2,8 @@ name: Daily Autonomous YouTube Shorts Generator
 
 on:
   schedule:
-    # Runs every day at 14:00 UTC (7:30 PM IST / 10:00 AM EST)
-    - cron: '0 14 * * *'
+    # Runs at 10:52 AM IST (05:22 UTC)
+    - cron: '22 5 * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI anytime
 
 jobs:
