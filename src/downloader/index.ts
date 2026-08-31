@@ -81,8 +81,8 @@ export async function downloadBackgroundVideo(bgVideoDir: string): Promise<strin
   // Step 1: Attempt yt-dlp CLI download if installed on system PATH
   const queries = [
     'Minecraft parkour gameplay vertical 1080x1920 shorts',
-    'Subway surfers gameplay vertical 9:16',
-    'Satisfying ASMR kinetic sand 9:16'
+    'Minecraft gameplay 9:16 vertical shorts',
+    'Minecraft speedrun gameplay vertical 9:16'
   ];
 
   for (const query of queries) {
