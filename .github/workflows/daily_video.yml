@@ -49,6 +49,7 @@ jobs:
         run: |
           git config --global user.name "GitHub Daily Automation Bot"
           git config --global user.email "bot@github.com"
-          git add temp/posted_stories.json || true
+          git pull origin main --rebase || true
+          git add content/posted_stories.json temp/posted_stories.json || true
           git commit -m "auto: update posted stories history [skip ci]" || true
-          git push || true
+          git push origin main || true

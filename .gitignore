@@ -3,6 +3,7 @@ dist/
 output/
 temp/
 !temp/posted_stories.json
+!content/posted_stories.json
 .env
 *.mp3
 *.wav
