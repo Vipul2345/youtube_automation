@@ -148,25 +148,33 @@ export async function generateVoiceover(
 }
 
 async function generateEdgeTTS(text: string, outputPath: string, voice: string) {
-  try {
-    const ttsVoice = voice && voice !== 'en-US-ChristopherNeural' && voice !== 'en-US-AnaNeural' 
-      ? voice 
-      : (process.env.DEFAULT_VOICE || 'en-US-BrianNeural');
+  const ttsVoice = voice && voice !== 'en-US-ChristopherNeural' && voice !== 'en-US-AnaNeural' 
+    ? voice 
+    : (process.env.DEFAULT_VOICE || 'en-US-BrianNeural');
 
-    logger.info(`Synthesizing narration using voice: ${ttsVoice} (Natural pitch, +20% rate)...`);
+  logger.info(`Synthesizing narration using voice: ${ttsVoice} (Natural pitch, +20% rate)...`);
 
-    const tts = new EdgeTTS({
-      voice: ttsVoice,
-      lang: 'en-US',
-      outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-      pitch: '+0%', // Natural un-distorted human frequency
-      rate: '+20%' // 1.20x smooth storytelling pace
-    });
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const tts = new EdgeTTS({
+        voice: ttsVoice,
+        lang: 'en-US',
+        outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+        pitch: '+0%', // Natural un-distorted human frequency
+        rate: '+20%' // 1.20x smooth storytelling pace
+      });
 
-    await tts.ttsPromise(text, outputPath);
-  } catch (err: any) {
-    throw new Error(`Edge-TTS synthesis failed: ${err.message}`);
+      await tts.ttsPromise(text, outputPath);
+      return;
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt < 3) {
+        await new Promise(res => setTimeout(res, 1500));
+      }
+    }
   }
+  throw new Error(`Edge-TTS synthesis failed after 3 attempts: ${lastErr?.message}`);
 }
 
 async function generateOpenAITTS(text: string, outputPath: string, options: PipelineOptions) {

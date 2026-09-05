@@ -39,6 +39,10 @@ export function isJunkOrMetaThread(title: string, body: string, stickied: boolea
     'mod post',
     'moderator',
     'subreddit rules',
+    'posting rules',
+    'posting_rules',
+    'please read',
+    'submission rules',
     'welcome to',
     'frequently asked',
     'read before posting',
@@ -50,14 +54,19 @@ export function isJunkOrMetaThread(title: string, body: string, stickied: boolea
     'weekly thread',
     'nomination',
     'community update',
-    'official thread'
+    'official thread',
+    'announcement',
+    'guidelines'
   ];
 
-  for (const kw of junkKeywords) {
-    if (t.includes(kw)) return true;
+  // Reject non-English script spam (Cyrillic, CJK, Arabic, Devanagari, etc.)
+  const foreignCharRegex = /[\u0400-\u04FF\u4E00-\u9FFF\u3040-\u30FF\u0600-\u06FF\u0900-\u097F\u0590-\u05FF]/gu;
+  const foreignTitleMatches = title.match(foreignCharRegex);
+  if (foreignTitleMatches && foreignTitleMatches.length >= 3) {
+    return true;
   }
-
-  if (t.startsWith('looking for') || t.startsWith('ask here') || t.startsWith('[meta]') || t.includes('find a post')) {
+  const foreignBodyMatches = body.match(foreignCharRegex);
+  if (foreignBodyMatches && foreignBodyMatches.length >= 10) {
     return true;
   }
 
@@ -204,11 +213,11 @@ async function getRedditOAuthToken(): Promise<string | null> {
 }
 
 export const STORY_SUBREDDITS = {
-  drama: ['AmItheAsshole', 'relationship_advice', 'confessions', 'offmychest'],
-  revenge: ['ProRevenge', 'MaliciousCompliance', 'SupernaturalRevenge'],
-  workplace: ['TalesFromRetail', 'TalesFromYourServer', 'talesfromtechsupport'],
-  life_stories: ['tifu', 'stories', 'BestofRedditorUpdates'],
-  scary_creepy: ['LetsNotMeet', 'nosleep', 'Glitch_in_the_Matrix']
+  drama: ['confessions', 'offmychest', 'TrueOffMyChest', 'AmItheAsshole', 'relationship_advice'],
+  revenge: ['ProRevenge', 'MaliciousCompliance'],
+  workplace: ['TalesFromRetail', 'TalesFromYourServer'],
+  life_stories: ['tifu', 'stories', 'confession'],
+  scary_creepy: ['LetsNotMeet', 'nosleep']
 };
 
 export async function fetchRedditStory(

@@ -80,9 +80,6 @@ export function expandContractions(text: string): string {
     t = t.replace(regex, replacement);
   }
 
-  // Universal 's rule: Any word with 's (e.g. person's -> person is, car's -> car is, it's -> it is)
-  t = t.replace(/\b([A-Za-z0-9]+)['’]s\b/gi, '$1 is');
-
   return t;
 }
 
@@ -142,12 +139,24 @@ export function cleanStoryText(rawText: string): string {
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
   text = text.replace(/(\*\*|__|\*|_|~~)(.*?)\1/g, '$2');
 
-  // Step 10: Remove Edit/Update/TLDR lines
+  // Step 10: Remove Meta intros, disclaimers, Edit/Update/TLDR lines
+  text = text.replace(/\bI am not the OOP.*$/gmi, ' ');
+  text = text.replace(/\bOOP is.*$/gmi, ' ');
+  text = text.replace(/\bTrigger Warning:?.*$/gmi, ' ');
+  text = text.replace(/\bOriginal Post:?.*$/gmi, ' ');
+  text = text.replace(/\bMood Spoiler:?.*$/gmi, ' ');
+  text = text.replace(/\bStatus:?.*$/gmi, ' ');
   text = text.replace(/\bEDIT:.*$/gmi, ' ');
   text = text.replace(/\bUPDATE:.*$/gmi, ' ');
   text = text.replace(/\bTL;?DR:?.*$/gmi, ' ');
 
-  // Step 11: Clean any orphan brackets/quotes or non-word symbols at the beginning/end
+  // Step 11: Normalize age/gender tags for spoken audio (e.g. (28F) -> 28-year-old female)
+  text = text.replace(/\((\d{1,2})\s*([fF])\)/g, ', $1 year old female, ');
+  text = text.replace(/\((\d{1,2})\s*([mM])\)/g, ', $1 year old male, ');
+  text = text.replace(/\b(\d{1,2})\s*([fF])\b/g, '$1 year old female');
+  text = text.replace(/\b(\d{1,2})\s*([mM])\b/g, '$1 year old male');
+
+  // Step 12: Clean any orphan brackets/quotes or non-word symbols at the beginning/end
   text = text.replace(/^[<>/=]+\s*/, '');
 
   // Step 12: Normalize quotes, dashes, and whitespace

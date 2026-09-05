@@ -24,9 +24,13 @@ export async function runSingleStoryPipeline(options: PipelineOptions): Promise<
   logger.step(2, 4, 'Voice Synthesis / TTS (Cache Supported)');
   const audioResult = await generateVoiceover(story.cleanedText, options);
 
-  // Step 3: Subtitle Generation (Hormozi ASS Style)
+  // Step 3: Subtitle Generation (Hormozi ASS Style + Reddit Title Card Hook)
   logger.step(3, 4, 'Subtitle / Transcription Engine');
-  const captionFiles = generateCaptions(audioResult, options.tempDir, options.ratio);
+  const captionFiles = generateCaptions(audioResult, options.tempDir, options.ratio, {
+    title: story.title,
+    author: story.author,
+    subreddit: story.subreddit
+  });
 
   // Step 4: Video Composition (Gameplay + Reddit Header Hook Card + Audio Ducking)
   logger.step(4, 4, 'Video Composition & Burning Subtitles');

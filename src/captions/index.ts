@@ -66,7 +66,6 @@ export function generateCaptionItems(
 
     const chunkDuration = chunk.durationSeconds;
 
-    // Group words into punchy 2-3 word captions for short-form video engagement
     const wordGroups: string[][] = [];
     for (let i = 0; i < words.length; i += wordsPerCaption) {
       wordGroups.push(words.slice(i, i + wordsPerCaption));
@@ -95,7 +94,10 @@ export function generateCaptionItems(
       for (let j = 0; j < group.length; j++) {
         const word = group[j];
         const wWeight = wordWeights[j];
-        const wordDuration = (wWeight / totalGroupWordWeight) * groupDuration;
+        let wordDuration = (wWeight / totalGroupWordWeight) * groupDuration;
+        if (wordDuration < 0.25) {
+          wordDuration = 0.25;
+        }
         const wordEndOffset = wordStartOffset + wordDuration;
 
         groupWords.push({
@@ -141,18 +143,26 @@ export function createSRTContent(captions: CaptionItem[]): string {
 }
 
 /**
- * Premium Alex Hormozi Style Animated ASS Subtitle Generator.
- * Features: Large bold typography (fontSize 68), heavy black border (outline 6), drop shadow,
- * electric yellow active word highlight, and dynamic pop-out scaling tags.
+ * Premium Alex Hormozi Style Animated ASS Subtitle & Reddit Card Hook Generator.
  */
-export function createASSContent(captions: CaptionItem[], ratio: AspectRatio): string {
+export function createASSContent(
+  captions: CaptionItem[], 
+  ratio: AspectRatio,
+  storyMeta?: { title?: string; author?: string; subreddit?: string }
+): string {
   const isVertical = ratio === '9:16';
-  const alignment = 2; // 2 = Bottom-center alignment (lower side of the screen)
-  const fontSize = isVertical ? 64 : 42; // High-impact font size for 1080x1920
-  const marginV = isVertical ? 280 : 50; // Elevated 280px from bottom edge for lower side placement
+  const alignment = 2; // 2 = Bottom-center alignment
+  const fontSize = isVertical ? 64 : 42;
+  const marginV = isVertical ? 280 : 50;
+
+  const subName = storyMeta?.subreddit ? (storyMeta.subreddit.startsWith('r/') ? storyMeta.subreddit : `r/${storyMeta.subreddit}`) : 'r/stories';
+  const authName = storyMeta?.author ? (storyMeta.author.startsWith('u/') ? storyMeta.author : `u/${storyMeta.author}`) : 'u/RedditUser';
+  const cleanCardTitle = storyMeta?.title ? storyMeta.title.replace(/\\/g, '/').replace(/{/g, '(').replace(/}/g, ')') : 'Reddit Story';
+
+  const HOOK_CARD_DURATION = 3.50;
 
   const header = `[Script Info]
-Title: High Impact Hormozi Captions
+Title: High Impact Hormozi Captions & Reddit Hook Card
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -164,10 +174,12 @@ PlayResY: ${isVertical ? 1920 : 1080}
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Default,Arial Black,${fontSize},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,1,0,1,6,4,${alignment},30,30,${marginV},1
 Style: Watermark,Arial Black,26,&H00FFFFFF,&H00000000,&H00000000,&H80000000,-1,0,0,0,100,100,1,0,1,3,2,8,20,20,40,1
+Style: RedditCard,Arial Black,34,&H00FFFFFF,&H0000FFFF,&H00000000,&HE01A1A1B,-1,0,0,0,100,100,1,0,3,12,6,5,40,40,900,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:00.00,0:10:00.00,Watermark,,0,0,0,,🤖 AI Created
+Dialogue: 1,0:00:00.00,0:00:03.50,RedditCard,,0,0,0,,{\\fad(150,250)}${subName} • ${authName}\\N${cleanCardTitle}
 
 `;
 
@@ -177,14 +189,21 @@ Dialogue: 0,0:00:00.00,0:10:00.00,Watermark,,0,0,0,,🤖 AI Created
     if (caption.words && caption.words.length > 0 && isVertical) {
       for (let i = 0; i < caption.words.length; i++) {
         const activeWordObj = caption.words[i];
-        const startASS = formatASSTimestamp(activeWordObj.startTimeSec);
-        const endASS = formatASSTimestamp(activeWordObj.endTimeSec);
+        
+        // Suppress word captions while Reddit Title Card is displayed
+        if (activeWordObj.endTimeSec <= HOOK_CARD_DURATION) {
+          continue;
+        }
 
-        // Build active word highlight with electric yellow color & 115% pop scaling tag
+        const effectiveStart = Math.max(HOOK_CARD_DURATION, activeWordObj.startTimeSec);
+        const effectiveEnd = Math.max(effectiveStart + 0.25, activeWordObj.endTimeSec);
+
+        const startASS = formatASSTimestamp(effectiveStart);
+        const endASS = formatASSTimestamp(effectiveEnd);
+
         const formattedWords = caption.words.map((w, idx) => {
           const upperWord = w.word.toUpperCase();
           if (idx === i) {
-            // Electric Yellow color (&H0000FFFF) + 115% font scale pop tag (\fscx115\fscy115)
             return `{\\c&H0000FFFF\\fscx115\\fscy115}${upperWord}{\\r}`;
           } else {
             return upperWord;
@@ -194,8 +213,15 @@ Dialogue: 0,0:00:00.00,0:10:00.00,Watermark,,0,0,0,,🤖 AI Created
         dialogueLines.push(`Dialogue: 0,${startASS},${endASS},Default,,0,0,0,,${formattedWords}`);
       }
     } else {
+      if (caption.endTimeSec <= HOOK_CARD_DURATION) {
+        continue;
+      }
+      const effectiveStart = Math.max(HOOK_CARD_DURATION, caption.startTimeSec);
+      const startASS = formatASSTimestamp(effectiveStart);
+      const endASS = formatASSTimestamp(Math.max(effectiveStart + 0.25, caption.endTimeSec));
+
       const displayText = isVertical ? caption.text.toUpperCase() : caption.text;
-      dialogueLines.push(`Dialogue: 0,${caption.formattedStartASS},${caption.formattedEndASS},Default,,0,0,0,,${displayText}`);
+      dialogueLines.push(`Dialogue: 0,${startASS},${endASS},Default,,0,0,0,,${displayText}`);
     }
   }
 
@@ -205,18 +231,18 @@ Dialogue: 0,0:00:00.00,0:10:00.00,Watermark,,0,0,0,,🤖 AI Created
 export function generateCaptions(
   combinedAudio: CombinedAudioResult,
   outputDir: string,
-  ratio: AspectRatio
+  ratio: AspectRatio,
+  storyMeta?: { title?: string; author?: string; subreddit?: string }
 ): SubtitleFiles {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // 2 words per caption for punchy vertical Shorts/Reels, 5 for horizontal
-  const wordsPerCaption = ratio === '9:16' ? 2 : 5;
+  const wordsPerCaption = ratio === '9:16' ? 3 : 5;
   const captions = generateCaptionItems(combinedAudio, wordsPerCaption);
 
   const srtContent = createSRTContent(captions);
-  const assContent = createASSContent(captions, ratio);
+  const assContent = createASSContent(captions, ratio, storyMeta);
 
   const srtPath = path.join(outputDir, `captions_${Date.now()}.srt`);
   const assPath = path.join(outputDir, `captions_${Date.now()}.ass`);
