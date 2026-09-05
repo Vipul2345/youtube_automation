@@ -47,15 +47,26 @@ export function loadPostedHistory(): HistoryRecord {
   };
 }
 
-export function isStoryPosted(storyId: string): boolean {
+export function isStoryPosted(storyId: string, title?: string): boolean {
   const history = loadPostedHistory();
-  return history.postedIds.includes(storyId);
+  if (history.postedIds.includes(storyId)) return true;
+  if (title) {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
+    if (history.postedIds.some(id => id.includes(slug))) return true;
+  }
+  return false;
 }
 
-export function markStoryPosted(storyId: string): void {
+export function markStoryPosted(storyId: string, title?: string): void {
   const history = loadPostedHistory();
   if (!history.postedIds.includes(storyId)) {
     history.postedIds.push(storyId);
+  }
+  if (title) {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 40);
+    if (slug && !history.postedIds.includes(slug)) {
+      history.postedIds.push(slug);
+    }
   }
   history.lastRunDate = new Date().toISOString();
 

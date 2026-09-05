@@ -5,6 +5,7 @@ import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import ffprobePath from '@ffprobe-installer/ffprobe';
 import { PipelineOptions } from '../types/index.js';
 import { resolveAssetPools } from '../assets/pool.js';
+import { generateRedditTitleCard } from './redditCard.js';
 import { logger } from '../utils/logger.js';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
@@ -14,6 +15,10 @@ export interface VideoCompositionInput {
   voiceoverAudioPath: string;
   audioDurationSeconds: number;
   assSubtitlePath: string;
+  storyTitle?: string;
+  storyAuthor?: string;
+  subreddit?: string;
+  score?: number;
   options: PipelineOptions;
 }
 
@@ -24,10 +29,23 @@ function escapeFFmpegPath(filePath: string): string {
 }
 
 /**
- * 3-Layer Video Composition Engine with Physics Motion Video Support & Audio Ducking.
+ * 4-Layer High-Retention Video Composition Engine:
+ * Layer 0 (Bottom): Background Gameplay Video (Random Start Offset)
+ * Layer 1 (Middle): 25% Dark Overlay Tint
+ * Layer 2 (Overlay): 3.5s Reddit Title Header Card (Viral 3-Sec Hook)
+ * Layer 3 (Top): Animated Hormozi Subtitles + '🤖 AI Created' Watermark
  */
 export async function composeVideo(input: VideoCompositionInput): Promise<string> {
-  const { voiceoverAudioPath, audioDurationSeconds, assSubtitlePath, options } = input;
+  const { 
+    voiceoverAudioPath, 
+    audioDurationSeconds, 
+    assSubtitlePath, 
+    storyTitle, 
+    storyAuthor, 
+    subreddit, 
+    score, 
+    options 
+  } = input;
 
   const outputFilePath = path.resolve(options.output);
   const outputDir = path.dirname(outputFilePath);
@@ -36,62 +54,103 @@ export async function composeVideo(input: VideoCompositionInput): Promise<string
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // Resolve background video (or generate 2D physics simulation video)
+  // Resolve background video & background music
   const poolAssets = await resolveAssetPools(options, audioDurationSeconds);
   const bgVideoPath = poolAssets.bgVideoPath;
   const bgMusicPath = poolAssets.bgMusicPath;
 
   if (!bgVideoPath || !fs.existsSync(bgVideoPath)) {
-    throw new Error(`ERROR: No valid video background found in assets/backgrounds/ and physics video generator failed.`);
+    throw new Error(`ERROR: No valid video background found in assets/backgrounds/.`);
   }
 
   const isVertical = options.ratio === '9:16';
   const width = isVertical ? 1080 : 1920;
   const height = isVertical ? 1920 : 1080;
 
-  logger.info(`=======================================================`);
-  logger.info(`2D PHYSICS & GAMEPLAY 3-LAYER VIDEO COMPOSITION ENGINE`);
-  logger.info(`Layer 0 (Bottom): Background Video -> ${path.basename(bgVideoPath)}`);
-  logger.info(`Layer 1 (Middle): 20% Dark Overlay Tint`);
-  logger.info(`Layer 2 (Top):    Animated ASS Captions -> ${path.basename(assSubtitlePath)}`);
-  if (bgMusicPath) {
-    logger.info(`Audio Stacking:   Voiceover Track (100%) + Background Music (Ducked -20dB)`);
-  } else {
-    logger.info(`Audio Stacking:   Voiceover Track (100%)`);
+  // Render Reddit Title Card Overlay Image for 3.5s Hook
+  let cardOverlayPath = '';
+  if (storyTitle) {
+    try {
+      const cardTempPath = path.join(options.tempDir, `reddit_card_${Date.now()}.png`);
+      cardOverlayPath = await generateRedditTitleCard({
+        title: storyTitle,
+        author: storyAuthor || 'RedditUser',
+        subreddit: subreddit || 'stories',
+        score: score || 14200,
+        outputPath: cardTempPath,
+        width,
+        height
+      });
+    } catch (err: any) {
+      logger.warn(`Reddit Title Card generation skipped: ${err.message}`);
+    }
   }
+
+  logger.info(`=======================================================`);
+  logger.info(`VIRAL SHORTS 4-LAYER VIDEO COMPOSITION ENGINE`);
+  logger.info(`Layer 0 (Bottom): Background Video -> ${path.basename(bgVideoPath)}`);
+  logger.info(`Layer 1 (Middle): 25% Dark Overlay Tint`);
+  if (cardOverlayPath) {
+    logger.info(`Layer 2 (Hook):   Reddit Title Header Card (0.0s to 3.5s Overlay)`);
+  }
+  logger.info(`Layer 3 (Top):    Animated ASS Captions -> ${path.basename(assSubtitlePath)}`);
   logger.info(`=======================================================`);
 
   const hasBgMusic = bgMusicPath && fs.existsSync(bgMusicPath);
+  const hasTitleCard = cardOverlayPath && fs.existsSync(cardOverlayPath);
+  const randomStartOffset = Math.floor(Math.random() * 45); // Randomize start offset up to 45s
+
   const command = ffmpeg();
 
   // Input 0: Main Voiceover Audio Track
   command.input(voiceoverAudioPath);
 
-  // Input 1: Background Video Clip (Looped seamlessly via -stream_loop -1)
+  // Input 1: Background Video Clip (Randomized start timestamp -ss, looped seamlessly)
   command
     .input(bgVideoPath)
-    .inputOptions(['-stream_loop', '-1']);
+    .inputOptions([
+      `-ss ${randomStartOffset}`,
+      '-stream_loop', '-1'
+    ]);
 
-  // Input 2: Optional Background Music Audio Track
+  let nextInputIndex = 2;
+
+  // Input 2 (Optional): Background Music
+  let bgMusicInputIdx = -1;
   if (hasBgMusic) {
     command.input(bgMusicPath);
+    bgMusicInputIdx = nextInputIndex++;
+  }
+
+  // Input 3 (Optional): Reddit Title Card Image
+  let cardInputIdx = -1;
+  if (hasTitleCard) {
+    command.input(cardOverlayPath);
+    cardInputIdx = nextInputIndex++;
   }
 
   const filterGraph: string[] = [];
   const escapedAssPath = escapeFFmpegPath(assSubtitlePath);
 
-  // Video Filter Graph: Scale, Center-Crop, 1.5x Video Speedup, 20% Dark Tint Overlay, Burn Subtitles
-  const videoFilter = `[1:v]scale=${width}:${height}:force_original_aspect_ratio=increase,` +
+  // Build Video Filter Graph
+  let vFilter = `[1:v]scale=${width}:${height}:force_original_aspect_ratio=increase,` +
     `crop=${width}:${height},setpts=PTS/1.25,` +
-    `drawbox=y=0:color=black@0.20:width=iw:height=ih:t=fill[vdimmed];` +
-    `[vdimmed]subtitles='${escapedAssPath}'[outv]`;
+    `drawbox=y=0:color=black@0.25:width=iw:height=ih:t=fill[vbase];`;
 
-  filterGraph.push(videoFilter);
+  if (hasTitleCard) {
+    // Overlay Reddit Title Card during first 3.5 seconds
+    vFilter += `[vbase][${cardInputIdx}:v]overlay=0:0:enable='between(t,0,3.5)'[vhook];` +
+      `[vhook]subtitles='${escapedAssPath}'[outv]`;
+  } else {
+    vFilter += `[vbase]subtitles='${escapedAssPath}'[outv]`;
+  }
 
-  // Audio Filter Graph: Main Voiceover (1.0) + Ducked Background Music (-20dB)
+  filterGraph.push(vFilter);
+
+  // Audio Filter Graph: Main Voiceover (1.0) + Ducked Background Music (-22dB)
   if (hasBgMusic) {
     const audioFilter = `[0:a]volume=1.0[maina];` +
-      `[2:a]volume=0.07[bga];` +
+      `[${bgMusicInputIdx}:a]volume=0.06[bga];` +
       `[maina][bga]amix=inputs=2:duration=first:dropout_transition=2[outa]`;
     filterGraph.push(audioFilter);
   } else {
@@ -131,7 +190,7 @@ export async function composeVideo(input: VideoCompositionInput): Promise<string
         logger.success(`Video exported successfully to: ${outputFilePath}`);
         resolve(outputFilePath);
       })
-      .on('error', (err, stdout, stderr) => {
+      .on('error', (err) => {
         logger.error(`FFmpeg Composition Failed: ${err.message}`);
         reject(err);
       });

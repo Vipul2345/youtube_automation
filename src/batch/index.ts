@@ -28,12 +28,16 @@ export async function runSingleStoryPipeline(options: PipelineOptions): Promise<
   logger.step(3, 4, 'Subtitle / Transcription Engine');
   const captionFiles = generateCaptions(audioResult, options.tempDir, options.ratio);
 
-  // Step 4: Video Composition (2D Physics / Gameplay + Audio Ducking)
+  // Step 4: Video Composition (Gameplay + Reddit Header Hook Card + Audio Ducking)
   logger.step(4, 4, 'Video Composition & Burning Subtitles');
   const finalVideoPath = await composeVideo({
     voiceoverAudioPath: audioResult.audioPath,
     audioDurationSeconds: audioResult.durationSeconds,
     assSubtitlePath: captionFiles.assPath,
+    storyTitle: story.title,
+    storyAuthor: story.author,
+    subreddit: story.subreddit,
+    score: story.score,
     options
   });
 

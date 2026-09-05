@@ -149,13 +149,18 @@ export async function generateVoiceover(
 
 async function generateEdgeTTS(text: string, outputPath: string, voice: string) {
   try {
-    const ttsVoice = 'en-US-GuyNeural';
+    const ttsVoice = voice && voice !== 'en-US-ChristopherNeural' && voice !== 'en-US-AnaNeural' 
+      ? voice 
+      : (process.env.DEFAULT_VOICE || 'en-US-BrianNeural');
+
+    logger.info(`Synthesizing narration using voice: ${ttsVoice} (Natural pitch, +20% rate)...`);
+
     const tts = new EdgeTTS({
       voice: ttsVoice,
       lang: 'en-US',
       outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-      pitch: '+15%',
-      rate: '+25%' // 1.25x natural human speaking rate
+      pitch: '+0%', // Natural un-distorted human frequency
+      rate: '+20%' // 1.20x smooth storytelling pace
     });
 
     await tts.ttsPromise(text, outputPath);
