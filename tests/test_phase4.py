@@ -68,6 +68,9 @@ def test_gemini_request_schema_inlines_pydantic_definitions():
                 yield from schema_keys(child)
 
     assert all(key not in {"$defs", "$ref"} for key in schema_keys(schema))
+    assert "additionalProperties" not in set(schema_keys(schema))
+    assert "title" not in set(schema_keys(schema))
+    assert "default" not in set(schema_keys(schema))
     assert schema["properties"]["sections"]["items"]["properties"]["heading"]["type"] == "string"
 
 

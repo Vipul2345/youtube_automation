@@ -241,8 +241,10 @@ def _inline_schema_refs(schema: dict) -> dict:
             resolved.update({key: resolve(item) for key, item in value.items() if key != "$ref"})
             return resolved
 
-        return {key: resolve(item) for key, item in value.items() if key != "$defs"}
-
+        # Gemini REST API rejects Pydantic-generated keys like
+        # additionalProperties, title, and default.
+        _STRIP_KEYS = frozenset({"$defs", "additionalProperties", "title", "default"})
+        return {key: resolve(item) for key, item in value.items() if key not in _STRIP_KEYS}
     result = resolve(schema)
     if not isinstance(result, dict):
         raise ValueError("Response schema must be a JSON object")
