@@ -99,6 +99,6 @@ Add these as **repository Secrets** at **Settings > Secrets and variables > Acti
 - [ ] `YOUTUBE_CLIENT_SECRET`
 - [ ] `YOUTUBE_REFRESH_TOKEN`
 
-The workflow in `.github/workflows/daily_shorts.yml` runs at 08:00 and 16:00 UTC and can also be started with **Run workflow**. It installs Python and FFmpeg/ffprobe, runs the live pipeline, and uploads the rendered MP4 as a seven-day artifact.
+The workflow in `.github/workflows/daily_shorts.yml` runs at 11:00 AM and 8:15 PM India Standard Time (05:30 and 14:45 UTC) and can also be started with **Run workflow**. Scheduled uploads explicitly use `YOUTUBE_PRIVACY_STATUS=public`. It installs Python and FFmpeg/ffprobe, runs the live pipeline, and uploads the rendered MP4 as a seven-day artifact.
 
 The workflow uses the repository `GITHUB_TOKEN` to commit `state/history.json` after successful runs. The workflow has `contents: write` permission and serializes runs with the `youtube-shorts-pipeline` concurrency group so recent topics remain consistent.

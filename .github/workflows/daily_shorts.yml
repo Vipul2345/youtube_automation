@@ -2,8 +2,9 @@ name: Daily YouTube Shorts
 
 on:
   schedule:
-    - cron: "0 8 * * *"
-    - cron: "0 16 * * *"
+    # 11:00 and 20:15 Asia/Kolkata (IST), expressed in UTC for GitHub Actions.
+    - cron: "30 5 * * *"
+    - cron: "45 14 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -23,6 +24,7 @@ jobs:
       YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       DRY_RUN: "false"
+      YOUTUBE_PRIVACY_STATUS: public
       HISTORY_BACKEND: local
       OUTPUT_DIR: output
       WORK_DIR: work
@@ -70,4 +72,13 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update Shorts topic history [skip ci]"
-          git push
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "History push failed; refreshing the branch before retry ${attempt}."
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+          done
+          echo "Unable to persist publication history after three push attempts."
+          exit 1
