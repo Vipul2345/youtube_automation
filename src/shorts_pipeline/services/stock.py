@@ -170,9 +170,13 @@ async def download_clip(
         if content_length:
             size = int(content_length)
             if size > max_bytes:
-                raise TransientError(f"Content too large: {size:,} bytes (max {max_bytes:,})")
+                raise PermanentError(
+                    f"Content too large: {size:,} bytes (max {max_bytes:,})"
+                )
             if size < min_bytes:
-                raise TransientError(f"Content too small: {size:,} bytes (min {min_bytes:,})")
+                raise PermanentError(
+                    f"Content too small: {size:,} bytes (min {min_bytes:,})"
+                )
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         with open(dest, "wb") as f:
@@ -181,9 +185,9 @@ async def download_clip(
                 f.write(chunk)
                 bytes_written += len(chunk)
                 if bytes_written > max_bytes:
-                    raise TransientError(f"Download exceeded {max_bytes:,} bytes")
+                    raise PermanentError(f"Download exceeded {max_bytes:,} bytes")
             if bytes_written < min_bytes:
-                raise TransientError(f"Download only {bytes_written:,} bytes (min {min_bytes:,})")
+                raise PermanentError(f"Download only {bytes_written:,} bytes (min {min_bytes:,})")
 
     return dest
 

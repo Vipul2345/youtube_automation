@@ -101,4 +101,35 @@ Add these as **repository Secrets** at **Settings > Secrets and variables > Acti
 
 The workflow in `.github/workflows/daily_shorts.yml` runs at 11:00 AM and 8:15 PM India Standard Time (05:30 and 14:45 UTC) and can also be started with **Run workflow**. Scheduled uploads explicitly use `YOUTUBE_PRIVACY_STATUS=public`. It installs Python and FFmpeg/ffprobe, runs the live pipeline, and uploads the rendered MP4 as a seven-day artifact.
 
-The workflow uses the repository `GITHUB_TOKEN` to commit `state/history.json` after successful runs. The workflow has `contents: write` permission and serializes runs with the `youtube-shorts-pipeline` concurrency group so recent topics remain consistent.
+The workflow uses the repository `GITHUB_TOKEN` to commit `state/history.json`,
+`state/publication_ledger.json`, and upload receipts even when the pipeline fails.
+The ledger is separate from deduplication history: it records a stable publication ID,
+execution ID, script hash, upload stage, returned video ID, requested visibility, and
+observed visibility. A receipt is written immediately after YouTube returns an ID.
+The workflow has `contents: write` permission and serializes runs with the
+`youtube-shorts-pipeline` concurrency group (`cancel-in-progress: false`). A failed
+state push must be repaired from the receipt/ledger before another upload is attempted;
+never blindly retry an ambiguous upload.
+
+## Recovery and publication safety
+
+Live uploads require `DRY_RUN=false`, all three YouTube credentials, and a durable
+ledger write before the upload begins. Local dry runs do not mutate production history
+or the publication ledger. If upload returns an error or times out, the ledger is left
+as `failed` or `upload_outcome_unknown`; inspect the YouTube channel and the saved
+receipt before deciding whether an operation is complete. If a video ID exists, reconcile
+that video and mark the ledger manually rather than uploading a second copy.
+
+The uploader uses a resumable request, but resumability is not exactly-once publishing.
+Post-upload verification polls processing with a bounded timeout and records requested
+and observed privacy separately. Missing read permission, failed processing, or a public
+upload that remains private is `review_required`.
+
+The actual upload endpoint requires OAuth scope
+`https://www.googleapis.com/auth/youtube.upload`. Verification and channel ownership
+checks require a read-capable YouTube scope such as
+`https://www.googleapis.com/auth/youtube.readonly`; reauthorize manually with the
+helper when needed. OAuth permission errors are distinct from YouTube API project
+restrictions: an unverified/testing project may be restricted to private uploads even
+when the token and requested visibility are correct. Do not broaden scopes or change
+existing videos automatically.

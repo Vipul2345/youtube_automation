@@ -5,21 +5,30 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import random
+import uuid
 from pathlib import Path
 
 from shorts_pipeline.config import Settings, load_settings
+from shorts_pipeline.services.editorial import validate_script
 from shorts_pipeline.services.llm import generate_script
 from shorts_pipeline.services.renderer import RenderSegment, render_video
 from shorts_pipeline.services.stock import resolve_assets_for_section
 from shorts_pipeline.services.subtitles import write_ass_file
 from shorts_pipeline.services.tts import synthesize_to_files
-from shorts_pipeline.services.uploader import script_hash, upload_video
+from shorts_pipeline.services.uploader import script_hash, upload_video, verify_video
 from shorts_pipeline.state.history import (
     append_history,
     is_duplicate_story,
     recent_story_titles,
     recent_topics_and_hashes,
+)
+from shorts_pipeline.state.ledger import (
+    new_intent,
+    record,
+    stable_publication_id,
+    write_receipt,
 )
 from shorts_pipeline.utils.logging import configure_logging
 from shorts_pipeline.utils.validation import validate_video
@@ -44,6 +53,9 @@ async def run_pipeline(settings: Settings) -> Path:
     api_key = settings.gemini_api_key
     assert api_key is not None
     selected_topic = random.choice(TOPIC_CATEGORIES)
+    execution_id = os.getenv("GITHUB_RUN_ID") or str(uuid.uuid4())
+    slot = os.getenv("PUBLICATION_SLOT", settings.publication_slot)
+    publication_id = stable_publication_id(settings.publication_channel, slot)
     recent_topics = [*recent_topics, *recent_titles]
     script = None
     for attempt in range(1, settings.retry_max_attempts + 1):
@@ -76,6 +88,17 @@ async def run_pipeline(settings: Settings) -> Path:
     else:
         raise RuntimeError("Unable to generate a story that is new relative to recent history")
     assert script is not None
+    validate_script(script, settings, selected_topic)
+    intent = None
+    if not settings.dry_run:
+        intent = new_intent(settings.state_dir, publication_id, execution_id, script_hash(script))
+        intent = record(
+            settings.state_dir,
+            intent,
+            "scripted",
+            title=script.youtube_title,
+            requested_visibility=settings.youtube_privacy_status,
+        )
 
     stem = "short"
     audio_path = settings.work_dir / f"{stem}.mp3"
@@ -97,12 +120,49 @@ async def run_pipeline(settings: Settings) -> Path:
     if not clips:
         raise RuntimeError("No visual clips were produced")
 
-    total_duration = tts_result.duration_seconds or settings.target_duration_seconds
+    # The configured target is authoritative.  TTS can run longer than the
+    # requested duration (for example when the generated script is verbose),
+    # but allowing that value to drive the render can create an upload-invalid
+    # video longer than YouTube Shorts' 60-second limit.
+    total_duration = settings.target_duration_seconds
     segment_duration = total_duration / len(clips)
     segments = [RenderSegment(clip.file_path, segment_duration) for clip in clips]
     await render_video(output_path, audio_path, ass_path, segments, settings)
+    if intent is not None:
+        intent = record(settings.state_dir, intent, "rendered", output_path=str(output_path))
     await validate_video(output_path, settings)
-    youtube_video_id = await upload_video(output_path, script, settings)
+    if intent is not None:
+        intent = record(settings.state_dir, intent, "validated")
+    if settings.dry_run:
+        youtube_video_id = await upload_video(output_path, script, settings)
+    else:
+        intent = record(settings.state_dir, intent, "uploading")
+        try:
+            youtube_video_id = await upload_video(output_path, script, settings)
+        except TimeoutError as exc:
+            record(
+                settings.state_dir, intent, "upload_outcome_unknown", error_type=type(exc).__name__
+            )
+            raise RuntimeError("Upload outcome is unknown; do not retry blindly") from exc
+        except Exception as exc:
+            record(settings.state_dir, intent, "failed", error_type=type(exc).__name__)
+            raise
+        intent = record(settings.state_dir, intent, "uploaded", youtube_video_id=youtube_video_id)
+        write_receipt(settings.state_dir, intent)
+        try:
+            observed = await verify_video(str(youtube_video_id), settings)
+        except Exception as exc:
+            intent = record(
+                settings.state_dir, intent, "review_required", error_type=type(exc).__name__
+            )
+            write_receipt(
+                settings.state_dir, intent, recovery="Verify the existing video before any retry"
+            )
+            raise RuntimeError(
+                "Upload succeeded but publication verification requires review"
+            ) from exc
+        intent = record(settings.state_dir, intent, "published", **observed)
+        write_receipt(settings.state_dir, intent)
 
     if not settings.dry_run or settings.dry_run_update_history:
         append_history(

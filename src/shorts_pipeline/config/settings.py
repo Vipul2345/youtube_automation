@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     youtube_contains_synthetic_media: bool = True
     dry_run: bool = True
     dry_run_update_history: bool = False
+    publication_channel: str = Field(
+        default="configured-youtube-channel", min_length=1, max_length=200
+    )
+    publication_slot: str = Field(default="manual", min_length=1, max_length=120)
+    youtube_verify_timeout_seconds: float = Field(default=120, ge=10, le=600)
 
     retry_max_attempts: int = Field(default=3, ge=1, le=5)
     retry_base_seconds: float = Field(default=2.0, ge=0.1, le=30)
@@ -129,6 +134,24 @@ class Settings(BaseSettings):
         # Literal[int] does not coerce dotenv strings, unlike ordinary int fields.
         if isinstance(value, str) and value.isascii() and value.isdigit():
             return int(value)
+        return value
+
+    @field_validator(
+        "dry_run",
+        "dry_run_update_history",
+        "youtube_made_for_kids",
+        "youtube_contains_synthetic_media",
+        mode="before",
+    )
+    @classmethod
+    def parse_boolean(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip().casefold()
+            if normalized in {"true", "1", "yes", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "off"}:
+                return False
+            raise ValueError("boolean settings must be true or false")
         return value
 
     @field_validator(

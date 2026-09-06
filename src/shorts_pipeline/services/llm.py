@@ -95,6 +95,8 @@ class ShortsScript(BaseModel):
         default="Entertainment",
         description="Category string that maps to a YouTube category ID.",
     )
+    source_urls: list[str] = Field(default_factory=list, max_length=8)
+    claim_sources: dict[str, list[str]] = Field(default_factory=dict)
 
     @field_validator("youtube_tags")
     @classmethod

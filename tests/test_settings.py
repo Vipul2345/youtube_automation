@@ -53,6 +53,19 @@ def test_environment_overrides_dotenv_and_cwd(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"), [("false", False), ("true", True), ("0", False), ("1", True)]
+)
+def test_boolean_environment_values_are_parsed_explicitly(tmp_path, value, expected):
+    settings = Settings(project_root=tmp_path, dry_run=value)
+    assert settings.dry_run is expected
+
+
+def test_invalid_boolean_environment_value_is_rejected(tmp_path):
+    with pytest.raises(ValidationError):
+        Settings(project_root=tmp_path, dry_run="not-a-boolean")
+
+
+@pytest.mark.parametrize(
     "values",
     [
         {"youtube_privacy_status": "friends"},

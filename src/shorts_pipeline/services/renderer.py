@@ -150,6 +150,8 @@ async def render_video(
         "44100",
         "-threads",
         str(settings.ffmpeg_threads),
+        "-t",
+        f"{settings.target_duration_seconds:.3f}",
         str(output_path),
     ]
 

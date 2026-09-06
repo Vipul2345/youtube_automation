@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import time
 from pathlib import Path
 
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import Resource, build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 from shorts_pipeline.config.settings import Settings
@@ -111,6 +113,44 @@ async def upload_video(video_path: Path, script: ShortsScript, settings: Setting
     )
     logger.info("YouTube upload complete: %s", video_id)
     return video_id
+
+
+async def verify_video(video_id: str, settings: Settings) -> dict[str, str]:
+    """Bounded post-upload check; unavailable read permission becomes review, not success."""
+    deadline = time.monotonic() + settings.youtube_verify_timeout_seconds
+    last: dict[str, str] = {}
+    while time.monotonic() < deadline:
+        try:
+            response = await asyncio.to_thread(
+                lambda: (
+                    _service(settings)
+                    .videos()
+                    .list(part="status,processingDetails", id=video_id)
+                    .execute()
+                )
+            )
+        except HttpError as exc:
+            raise RuntimeError(
+                "YouTube verification requires a token with read access; review required"
+            ) from exc
+        items = response.get("items", [])
+        if not items:
+            raise RuntimeError("YouTube returned no metadata for the uploaded video")
+        item = items[0]
+        status = item.get("status", {})
+        processing = item.get("processingDetails", {})
+        last = {
+            "observed_visibility": str(status.get("privacyStatus", "unknown")),
+            "processing_status": str(processing.get("processingStatus", "unknown")),
+        }
+        if last["processing_status"] in {"failed", "terminated"}:
+            raise RuntimeError("YouTube processing failed; review required")
+        if last["processing_status"] == "succeeded":
+            return last
+        await asyncio.sleep(5)
+    raise RuntimeError(
+        f"YouTube processing did not complete within {settings.youtube_verify_timeout_seconds:.0f}s"
+    )
 
 
 def script_hash(script: ShortsScript) -> str:
