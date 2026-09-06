@@ -1,0 +1,73 @@
+name: Daily YouTube Shorts
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: youtube-shorts-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate-and-upload:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      DRY_RUN: "false"
+      HISTORY_BACKEND: local
+      OUTPUT_DIR: output
+      WORK_DIR: work
+      STATE_DIR: state
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+
+      - name: Install package
+        run: pip install -e .
+
+      - name: Run Shorts pipeline
+        run: python -m shorts_pipeline.main
+
+      - name: Upload rendered MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-short-${{ github.run_id }}
+          path: output/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit updated history
+        if: success()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f state/history.json
+          if git diff --cached --quiet; then
+            echo "No history changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update Shorts topic history [skip ci]"
+          git push
