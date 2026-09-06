@@ -92,7 +92,7 @@ class ShortsScript(BaseModel):
         description="1–15 relevant search tags for the video.",
     )
     category: str = Field(
-        default="Science & Technology",
+        default="Entertainment",
         description="Category string that maps to a YouTube category ID.",
     )
 
@@ -143,12 +143,12 @@ Rules:
 2. Include exactly 3 useful facts, insights, or narrative beats as separate sections.
 3. Each section must provide spoken text AND 1–6 visual search keywords for stock footage.
 4. End with a concise call-to-action (like, subscribe, comment).
-5. Keep the tone curious, clear, factual, upbeat — no sensational or unsupported claims.
+5. Keep the tone engaging, atmospheric, and advertiser-friendly; avoid graphic violence,
+   hateful content, and unsupported claims.
 6. The YouTube title must be under 100 characters and optimized for Shorts discovery.
 7. Include #Shorts in the description.
 8. Provide relevant YouTube tags (no # prefix).
-9. Choose one category from: Science & Technology, Education, Entertainment,
-   Music, Gaming, Howto, News, Sports, Travel.
+9. Choose one category from: Education, Entertainment, Music, Gaming, Howto, News, Sports, Travel.
 
 IMPORTANT: Do NOT repeat or substantially overlap topics from the recent history provided.
 If you cannot generate a sufficiently different topic, indicate an error in the response."""
@@ -215,6 +215,38 @@ def _repair_json(raw: str) -> str:
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
+def _inline_schema_refs(schema: dict) -> dict:
+    """Expand Pydantic's local ``$defs`` references for Gemini's API schema."""
+    definitions = schema.get("$defs", {})
+
+    def resolve(value: object) -> object:
+        if isinstance(value, list):
+            return [resolve(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+
+        reference = value.get("$ref")
+        if reference is not None:
+            prefix = "#/$defs/"
+            if not isinstance(reference, str) or not reference.startswith(prefix):
+                raise ValueError(f"Unsupported schema reference: {reference!r}")
+            name = reference.removeprefix(prefix)
+            if name not in definitions:
+                raise ValueError(f"Unknown schema definition: {name!r}")
+            resolved = resolve(definitions[name])
+            if not isinstance(resolved, dict):
+                raise ValueError(f"Schema definition is not an object: {name!r}")
+            resolved.update({key: resolve(item) for key, item in value.items() if key != "$ref"})
+            return resolved
+
+        return {key: resolve(item) for key, item in value.items() if key != "$defs"}
+
+    result = resolve(schema)
+    if not isinstance(result, dict):
+        raise ValueError("Response schema must be a JSON object")
+    return result
+
+
 def _build_request_body(
     model: str,
     system_instruction: str,
@@ -237,6 +269,8 @@ def _build_request_body(
             "maxOutputTokens": max_output_tokens,
             "temperature": 0.7,
             "topP": 0.95,
+            "responseMimeType": "application/json",
+            "responseSchema": _inline_schema_refs(response_schema),
         },
     }
 

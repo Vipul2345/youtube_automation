@@ -56,9 +56,12 @@ def build_upload_body(script: ShortsScript, settings: Settings) -> dict:
     tags = list(script.youtube_tags)
     if not any(tag.lower().lstrip("#") == "shorts" for tag in tags):
         tags.append("#Shorts")
+    title = f"{script.youtube_title.rstrip()} #Shorts"
+    if len(title) > 100:
+        title = f"{script.youtube_title.rstrip()[:91].rstrip()} #Shorts"
     return {
         "snippet": {
-            "title": f"{script.youtube_title.rstrip()} #Shorts",
+            "title": title,
             "description": description,
             "tags": tags,
             "categoryId": settings.youtube_category_id,

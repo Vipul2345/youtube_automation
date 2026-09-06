@@ -106,8 +106,15 @@ async def render_video(
         f"aformat=sample_rates=44100:channel_layouts=stereo[a]"
     )
 
+    # FFmpeg's subtitles filter has its own escaping rules, even though the
+    # outer subprocess invocation uses an argument array. Keep subtitle burn-in
+    # in the same filter graph as the mapped video stream; applying -vf after
+    # -filter_complex is rejected by FFmpeg for this graph.
+    subtitle_path = ass_path.as_posix().replace(":", "\\:").replace("'", "\\'")
+    subtitle_filter = f"[v]subtitles=filename='{subtitle_path}'[vout]"
+
     # Combine into one filter_complex.
-    full_filtergraph = f"{video_filtergraph}; {audio_filtergraph}"
+    full_filtergraph = f"{video_filtergraph}; {audio_filtergraph}; {subtitle_filter}"
 
     # ── Assemble FFmpeg command ────────────────────────────────────────
     cmd = [
@@ -118,7 +125,7 @@ async def render_video(
         "-filter_complex",
         full_filtergraph,
         "-map",
-        "[v]",
+        "[vout]",
         "-map",
         "[a]",
         "-c:v",
@@ -143,8 +150,6 @@ async def render_video(
         "44100",
         "-threads",
         str(settings.ffmpeg_threads),
-        "-vf",
-        f"subtitles={ass_path}",
         str(output_path),
     ]
 
@@ -248,6 +253,17 @@ async def _validate_rendered(path: Path, settings: Settings) -> None:
         raise TransientError(
             f"Resolution mismatch: got {out_w}x{out_h}, "
             f"expected {settings.video_width}x{settings.video_height}"
+        )
+    if vs.get("codec_name") != "h264":
+        raise TransientError(f"Rendered video is not H.264: {vs.get('codec_name', 'unknown')}")
+    if vs.get("r_frame_rate") != f"{settings.video_fps}/1":
+        raise TransientError(
+            f"Rendered video FPS mismatch: got {vs.get('r_frame_rate', 'unknown')}, "
+            f"expected {settings.video_fps}/1"
+        )
+    if audio_streams[0].get("codec_name") != "aac":
+        raise TransientError(
+            f"Rendered audio is not AAC: {audio_streams[0].get('codec_name', 'unknown')}"
         )
 
     fmt = data.get("format", {})

@@ -6,9 +6,15 @@ from pathlib import Path
 import pytest
 
 from shorts_pipeline.config import Settings
-from shorts_pipeline.services.llm import ScriptSection, ShortsScript
+from shorts_pipeline.services.llm import ScriptSection, ShortsScript, _build_request_body
 from shorts_pipeline.services.uploader import build_upload_body, script_hash
-from shorts_pipeline.state.history import append_history, read_history, recent_topics_and_hashes
+from shorts_pipeline.state.history import (
+    append_history,
+    is_duplicate_story,
+    read_history,
+    recent_story_titles,
+    recent_topics_and_hashes,
+)
 from shorts_pipeline.utils.validation import validate_video
 
 
@@ -34,6 +40,28 @@ def sample_script() -> ShortsScript:
     )
 
 
+def test_gemini_request_schema_inlines_pydantic_definitions():
+    body = _build_request_body(
+        model="test-model",
+        system_instruction="system",
+        user_prompt="user",
+        response_schema=ShortsScript.model_json_schema(),
+    )
+    schema = body["generationConfig"]["responseSchema"]
+
+    def schema_keys(value):
+        if isinstance(value, dict):
+            yield from value
+            for child in value.values():
+                yield from schema_keys(child)
+        elif isinstance(value, list):
+            for child in value:
+                yield from schema_keys(child)
+
+    assert all(key not in {"$defs", "$ref"} for key in schema_keys(schema))
+    assert schema["properties"]["sections"]["items"]["properties"]["heading"]["type"] == "string"
+
+
 def test_upload_body_adds_shorts_metadata(tmp_path: Path):
     body = build_upload_body(sample_script(), Settings(project_root=tmp_path))
     assert body["snippet"]["title"].endswith("#Shorts")
@@ -53,12 +81,45 @@ def test_history_round_trip_and_recent_values(tmp_path: Path):
     )
 
 
+def test_history_rejects_duplicate_hash_and_similar_title(tmp_path: Path):
+    append_history(tmp_path, "History", "The Mystery of the Lost Colony", "same-hash")
+    assert recent_story_titles(tmp_path) == ["The Mystery of the Lost Colony"]
+    assert is_duplicate_story("Another title", "same-hash", tmp_path)
+    assert is_duplicate_story("The Mystery of the Lost Colony", "new-hash", tmp_path)
+    assert not is_duplicate_story("Why Ancient Maps Hid a Secret", "new-hash", tmp_path)
+
+
+def test_history_detects_same_script_with_different_title(tmp_path: Path):
+    append_history(
+        tmp_path,
+        "History",
+        "The First Title",
+        "old-hash",
+        script_content="The old story explains how a hidden colony disappeared without a trace.",
+        youtube_video_id="youtube-123",
+    )
+    assert is_duplicate_story(
+        "A Completely Different Title",
+        "new-hash",
+        tmp_path,
+        script_content="The old story explains how a hidden colony disappeared without a trace.",
+    )
+    entry = read_history(tmp_path)[0]
+    assert entry["youtube_video_id"] == "youtube-123"
+
+
 def test_validate_video_accepts_expected_probe(monkeypatch, tmp_path: Path):
     async def fake_probe(path, settings):
         return {
             "streams": [
-                {"codec_type": "video", "width": 1080, "height": 1920},
-                {"codec_type": "audio"},
+                {
+                    "codec_type": "video",
+                    "width": 1080,
+                    "height": 1920,
+                    "codec_name": "h264",
+                    "r_frame_rate": "30/1",
+                },
+                {"codec_type": "audio", "codec_name": "aac"},
             ],
             "format": {"duration": "45.0"},
         }
@@ -82,6 +143,13 @@ def test_validate_video_rejects_missing_audio(monkeypatch, tmp_path: Path):
     path.write_bytes(b"mp4")
     with pytest.raises(ValueError, match="no audio"):
         asyncio.run(validate_video(path, Settings(project_root=tmp_path)))
+
+
+def test_upload_title_stays_within_youtube_limit(tmp_path: Path):
+    script = sample_script()
+    script.youtube_title = "A" * 100
+    body = build_upload_body(script, Settings(project_root=tmp_path))
+    assert len(body["snippet"]["title"]) <= 100
 
 
 def test_script_hash_is_stable():

@@ -42,7 +42,13 @@ class Settings(BaseSettings):
     youtube_client_secret: SecretStr | None = Field(default=None, repr=False)
     youtube_refresh_token: SecretStr | None = Field(default=None, repr=False)
 
-    shorts_topic: str = Field(default="Everyday science", min_length=3, max_length=300)
+    shorts_topic: str = Field(
+        default=(
+            "Randomly select: Dark Psychology / Scary Stories or Bite-Sized History / Mysteries"
+        ),
+        min_length=3,
+        max_length=300,
+    )
     shorts_style: str = Field(
         default="Curious, clear, factual, upbeat; no sensational or unsupported claims",
         min_length=3,

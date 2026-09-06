@@ -143,13 +143,20 @@ class EdgeTTSProvider(TTSProvider):
             total_duration = word_boundaries[-1].end_seconds if word_boundaries else 0.0
 
             if not word_boundaries:
-                # Fallback: measure audio byte duration.
-                # MP3 16-bit mono 24000 Hz.
-                total_duration = len(audio_bytes) / (24000 * 2)
-                logger.warning(
-                    "No word boundaries received; estimated duration %.2fs",
-                    total_duration,
-                )
+                # Captions must be based on provider timestamps, never an MP3
+                # byte-size or average-speech estimate.
+                raise TransientError("Edge TTS returned no word-boundary metadata")
+
+            previous_end = 0.0
+            for boundary in word_boundaries:
+                if (
+                    boundary.offset_seconds < previous_end
+                    or boundary.duration_seconds <= 0
+                    or boundary.end_seconds <= boundary.offset_seconds
+                ):
+                    raise TransientError("Edge TTS returned invalid word-boundary ordering")
+                previous_end = boundary.end_seconds
+            total_duration = previous_end
 
             return TTSResult(
                 audio_bytes=audio_bytes,

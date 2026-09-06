@@ -66,6 +66,22 @@ async def validate_video(path: Path, settings: Settings) -> dict[str, Any]:
             f"Video validation failed: resolution is {dimensions[0]}x{dimensions[1]}, "
             f"expected {expected[0]}x{expected[1]}"
         )
+    if video.get("codec_name") != "h264":
+        raise ValueError(
+            "Video validation failed: expected H.264 video, got "
+            f"{video.get('codec_name', 'unknown')}"
+        )
+    frame_rate = video.get("r_frame_rate", "")
+    if frame_rate != f"{settings.video_fps}/1":
+        raise ValueError(
+            f"Video validation failed: expected {settings.video_fps} FPS, got "
+            f"{frame_rate or 'unknown'}"
+        )
+    audio = audios[0]
+    if audio.get("codec_name") != "aac":
+        raise ValueError(
+            f"Video validation failed: expected AAC audio, got {audio.get('codec_name', 'unknown')}"
+        )
     try:
         duration = float(data.get("format", {}).get("duration", 0))
     except (TypeError, ValueError) as exc:

@@ -426,8 +426,13 @@ async def _search_and_download(
         dest.unlink(missing_ok=True)
         return None
 
-    # Basic ffprobe validation.
+    # Reject downloads that are not readable video files. A zero-valued probe
+    # must not reach the renderer, which would otherwise fail much later.
     duration, width, height = await probe_clip(dest, binary=settings.ffprobe_binary)
+    if duration <= 0 or width <= 0 or height <= 0:
+        dest.unlink(missing_ok=True)
+        logger.warning("Downloaded asset failed ffprobe validation: %s", dest.name)
+        return None
 
     return StockClip(
         file_path=dest,
