@@ -10,5 +10,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "p2OPnKm5YHM"
+  },
+  {
+    "publication_id": "pub-8149ce83f0f17a9740ab9a5e",
+    "execution_id": "34048347687",
+    "script_hash": "2b61767a5a17bd89f6491fee798578057b18e24f16a0d55ef8514d18ec9daa31",
+    "created_at": "2026-09-06T17:22:03.493104+00:00",
+    "stage": "uploaded",
+    "updated_at": "2026-09-06T17:22:55.002619+00:00",
+    "title": "The Forgotten Secrets of the Founding Fathers",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "Dzg0lbEti3A"
   }
 ]
