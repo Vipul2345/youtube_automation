@@ -17,7 +17,7 @@ from shorts_pipeline.services.renderer import RenderSegment, render_video
 from shorts_pipeline.services.stock import resolve_assets_for_section
 from shorts_pipeline.services.subtitles import write_ass_file
 from shorts_pipeline.services.tts import synthesize_to_files
-from shorts_pipeline.services.uploader import script_hash, upload_video, verify_video
+from shorts_pipeline.services.uploader import script_hash, upload_video
 from shorts_pipeline.state.history import (
     append_history,
     is_duplicate_story,
@@ -148,20 +148,6 @@ async def run_pipeline(settings: Settings) -> Path:
             record(settings.state_dir, intent, "failed", error_type=type(exc).__name__)
             raise
         intent = record(settings.state_dir, intent, "uploaded", youtube_video_id=youtube_video_id)
-        write_receipt(settings.state_dir, intent)
-        try:
-            observed = await verify_video(str(youtube_video_id), settings)
-        except Exception as exc:
-            intent = record(
-                settings.state_dir, intent, "review_required", error_type=type(exc).__name__
-            )
-            write_receipt(
-                settings.state_dir, intent, recovery="Verify the existing video before any retry"
-            )
-            raise RuntimeError(
-                "Upload succeeded but publication verification requires review"
-            ) from exc
-        intent = record(settings.state_dir, intent, "published", **observed)
         write_receipt(settings.state_dir, intent)
 
     if not settings.dry_run or settings.dry_run_update_history:
