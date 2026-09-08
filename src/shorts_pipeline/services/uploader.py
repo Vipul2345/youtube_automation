@@ -8,6 +8,7 @@ import logging
 import time
 from pathlib import Path
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import Resource, build
@@ -42,7 +43,19 @@ def _credentials(settings: Settings) -> Credentials:
         scopes=SCOPES,
     )
     if not credentials.valid:
-        credentials.refresh(GoogleAuthRequest())
+        try:
+            credentials.refresh(GoogleAuthRequest())
+        except RefreshError as exc:
+            logger.error(
+                "YouTube OAuth refresh token expired or revoked. "
+                "Please run `python scripts/get_refresh_token.py` locally "
+                "to obtain a new token and update YOUTUBE_REFRESH_TOKEN."
+            )
+            raise RuntimeError(
+                "YouTube OAuth refresh token expired or revoked. "
+                "Please run `python scripts/get_refresh_token.py` "
+                "to regenerate `YOUTUBE_REFRESH_TOKEN`."
+            ) from exc
     return credentials
 
 

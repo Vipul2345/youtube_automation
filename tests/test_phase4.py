@@ -209,3 +209,23 @@ def test_live_upload_uses_mocked_resumable_worker(monkeypatch, tmp_path: Path):
     )
     result = asyncio.run(uploader.upload_video(video, sample_script(), settings))
     assert result == "mock-video-id"
+
+
+def test_credentials_handles_expired_refresh_token(monkeypatch, tmp_path: Path):
+    from google.auth.exceptions import RefreshError
+
+    from shorts_pipeline.services import uploader
+
+    def fake_refresh(self, request):
+        raise RefreshError("invalid_grant: Token has been expired or revoked.")
+
+    monkeypatch.setattr("google.oauth2.credentials.Credentials.refresh", fake_refresh)
+    settings = Settings(
+        project_root=tmp_path,
+        youtube_client_id="client",
+        youtube_client_secret="secret",
+        youtube_refresh_token="expired-token",
+    )
+    with pytest.raises(RuntimeError, match="YouTube OAuth refresh token expired or revoked"):
+        uploader._credentials(settings)
+
