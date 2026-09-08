@@ -34,5 +34,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "8wzet9hzR3o"
+  },
+  {
+    "publication_id": "pub-37c8b8790d6cddd139849377",
+    "execution_id": "34271008328",
+    "script_hash": "dcd52de7f2e2f66675e8ceb6446c0ac9c323061c7694c958d5f32d0886e9739a",
+    "created_at": "2026-09-08T19:48:09.118933+00:00",
+    "stage": "failed",
+    "updated_at": "2026-09-08T19:49:05.529261+00:00",
+    "title": "Why You Hate Your Own Photos #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "error_type": "RefreshError"
   }
 ]
