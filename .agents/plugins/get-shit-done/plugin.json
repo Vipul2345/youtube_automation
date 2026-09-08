@@ -1,0 +1,15 @@
+{
+  "name": "get-shit-done",
+  "version": "1.0.0",
+  "description": "Spec-driven development and context-engineering plugin to prevent context rot and systematically execute tasks.",
+  "author": {
+    "name": "Get Shit Done Community"
+  },
+  "keywords": [
+    "gsd",
+    "spec-driven",
+    "context-engineering",
+    "workflow",
+    "task-execution"
+  ]
+}

@@ -58,14 +58,17 @@ class ShortsScript(BaseModel):
     hook: str = Field(
         ...,
         min_length=10,
-        max_length=280,
-        description="The opening hook (10–280 chars), delivered in the first 1–3 seconds.",
+        max_length=140,
+        description=(
+            "The opening hook (10–140 chars and no more than 18 words), delivered "
+            "in the first 1–2 seconds."
+        ),
     )
     sections: list[ScriptSection] = Field(
         ...,
-        min_length=2,
-        max_length=5,
-        description="2–5 narrative sections with spoken text and visual keywords.",
+        min_length=3,
+        max_length=3,
+        description="Exactly 3 narrative sections with spoken text and visual keywords.",
     )
     cta: str = Field(
         ...,
@@ -140,12 +143,17 @@ video script approximately 40–50 seconds of spoken audio (roughly 100–130 wo
 
 Your response MUST be valid JSON matching the provided schema. Every field is required.
 
-Rules:
-1. Start with a STRONG, curiosity-driven hook (1–3 seconds).
-2. Include exactly 3 useful facts, insights, or narrative beats as separate sections.
+1. Start with a STRONG pattern-interrupt hook in the first 1â€“2 seconds. The hook must
+1. Start with a STRONG pattern-interrupt hook in the first 1–2 seconds. The hook must
+   and make a viewer want the next sentence. Keep it to 18 words or fewer. Do not begin
+   with greetings, context, "did you know", "here is", or a generic question.
+   "did you know", or a generic question.
+2. Include exactly 3 useful facts, insights, or narrative beats as separate sections:
+   setup, surprising detail, and payoff/reveal. Each section should be 20–45 words.
 3. Each section must provide spoken text AND 1–6 visual search keywords for stock footage.
 4. End with a concise call-to-action (like, subscribe, comment).
-5. Keep the tone engaging, atmospheric, and advertiser-friendly; avoid graphic violence,
+5. Keep the tone energetic, concise, vivid, and advertiser-friendly; use short sentences
+   and natural spoken transitions; avoid graphic violence,
    hateful content, and unsupported claims.
 6. The YouTube title must be under 100 characters and optimized for Shorts discovery.
 7. Include #Shorts in the description.
@@ -168,7 +176,10 @@ def build_generation_prompt(
         f"Style: {style}",
         f"Target duration: {target_duration:.0f} seconds.",
         "",
-        "Generate a complete YouTube Shorts script and metadata as a JSON object.",
+        "Generate a complete YouTube Shorts script and metadata as a JSON object. Make the hook "
+        "the strongest line in the script: it must stop a scrolling viewer immediately, "
+        "without clickbait or unsupported claims. Use exactly three sections, and make the "
+        "third section deliver a clear payoff rather than another unrelated fact.",
     ]
     if recent_topics:
         parts.append(
@@ -245,6 +256,7 @@ def _inline_schema_refs(schema: dict) -> dict:
         # additionalProperties, title, and default.
         _STRIP_KEYS = frozenset({"$defs", "additionalProperties", "title", "default"})
         return {key: resolve(item) for key, item in value.items() if key not in _STRIP_KEYS}
+
     result = resolve(schema)
     if not isinstance(result, dict):
         raise ValueError("Response schema must be a JSON object")

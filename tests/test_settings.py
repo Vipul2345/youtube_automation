@@ -23,6 +23,10 @@ def test_safe_defaults_and_no_io(tmp_path):
     assert settings.youtube_privacy_status == "private"
     assert settings.gemini_model == "gemini-3.1-flash-lite"
     assert settings.target_duration_seconds == 45
+    assert settings.tts_voice == "en-US-ChristopherNeural"
+    assert settings.tts_rate == "+12%"
+    assert settings.tts_pitch == "-1Hz"
+    assert settings.caption_words_per_unit == 2
     assert (settings.video_width, settings.video_height, settings.video_fps) == (1080, 1920, 30)
     assert settings.work_dir == root / "work"
     assert not root.exists()

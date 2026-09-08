@@ -125,8 +125,16 @@ async def run_pipeline(settings: Settings) -> Path:
     # but allowing that value to drive the render can create an upload-invalid
     # video longer than YouTube Shorts' 60-second limit.
     total_duration = settings.target_duration_seconds
-    segment_duration = total_duration / len(clips)
-    segments = [RenderSegment(clip.file_path, segment_duration) for clip in clips]
+    # Give the opening visual a quick 4-second beat, then let the explanatory
+    # visuals breathe evenly. This creates an immediate pattern interrupt while
+    # preserving the configured total duration.
+    opening_duration = min(4.0, total_duration * 0.12)
+    if len(clips) == 1:
+        durations = [total_duration]
+    else:
+        body_duration = (total_duration - opening_duration) / (len(clips) - 1)
+        durations = [opening_duration] + [body_duration] * (len(clips) - 1)
+    segments = [RenderSegment(clip.file_path, durations[index]) for index, clip in enumerate(clips)]
     await render_video(output_path, audio_path, ass_path, segments, settings)
     if intent is not None:
         intent = record(settings.state_dir, intent, "rendered", output_path=str(output_path))
@@ -149,6 +157,7 @@ async def run_pipeline(settings: Settings) -> Path:
             raise
         intent = record(settings.state_dir, intent, "uploaded", youtube_video_id=youtube_video_id)
         write_receipt(settings.state_dir, intent)
+        intent = record(settings.state_dir, intent, "published")
 
     if not settings.dry_run or settings.dry_run_update_history:
         append_history(

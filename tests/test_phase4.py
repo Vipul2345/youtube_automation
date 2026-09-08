@@ -41,6 +41,11 @@ def sample_script() -> ShortsScript:
                 text="The reason comes down to simple physics.",
                 visual_keywords=["physics"],
             ),
+            ScriptSection(
+                heading="Payoff",
+                text="That small detail changes how the whole event looks.",
+                visual_keywords=["experiment"],
+            ),
         ],
         cta="Follow for more facts.",
         youtube_title="A science fact",

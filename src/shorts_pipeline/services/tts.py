@@ -185,10 +185,6 @@ class EdgeTTSProvider(TTSProvider):
             len(result.word_boundaries),
             len(result.audio_bytes),
         )
-
-        if not result.word_boundaries and result.audio_bytes:
-            logger.warning("TTS audio produced but no word boundaries — captions may use estimates")
-
         return result
 
 

@@ -97,7 +97,8 @@ def new_intent(
     existing = find_active(state_dir, publication_id)
     if existing:
         raise RuntimeError(
-            f"Publication {publication_id} is already {existing.get('stage')}; reconcile it before retrying"
+            f"Publication {publication_id} is already {existing.get('stage')}; "
+            "reconcile it before retrying"
         )
     return record(
         state_dir,

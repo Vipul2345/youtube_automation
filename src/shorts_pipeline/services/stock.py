@@ -170,13 +170,9 @@ async def download_clip(
         if content_length:
             size = int(content_length)
             if size > max_bytes:
-                raise PermanentError(
-                    f"Content too large: {size:,} bytes (max {max_bytes:,})"
-                )
+                raise PermanentError(f"Content too large: {size:,} bytes (max {max_bytes:,})")
             if size < min_bytes:
-                raise PermanentError(
-                    f"Content too small: {size:,} bytes (min {min_bytes:,})"
-                )
+                raise PermanentError(f"Content too small: {size:,} bytes (min {min_bytes:,})")
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         with open(dest, "wb") as f:
@@ -212,17 +208,8 @@ async def generate_fallback_clip(
         "lavfi",
         "-i",
         f"color=c=0x1a1a2e:s={width}x{height}:d={duration}:r={fps}",
-        "-f",
-        "lavfi",
-        "-i",
-        (
-            f"nullsrc=s={width}x{height}:d={duration}:r={fps},"
-            f"geq=r='255*sin(2*PI*t/{duration})':"
-            f"b='128+64*sin(2*PI*t/{duration}+PI)':"
-            f"g='192*cos(2*PI*t/{duration}/2)':a=255"
-        ),
-        "-filter_complex",
-        "[0][1]overlay=format=auto:shortest=1,format=yuv420p",
+        "-vf",
+        "format=yuv420p",
         "-c:v",
         "libx264",
         "-preset",

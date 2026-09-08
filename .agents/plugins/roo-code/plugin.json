@@ -1,0 +1,17 @@
+{
+  "name": "roo-code",
+  "version": "1.0.0",
+  "description": "Role-based sub-agent execution modes (Architect, Code, Ask, Debug, Test) with strict boundary controls.",
+  "author": {
+    "name": "Roo Code Community"
+  },
+  "keywords": [
+    "roo-code",
+    "modes",
+    "architect",
+    "code",
+    "debug",
+    "ask",
+    "test"
+  ]
+}

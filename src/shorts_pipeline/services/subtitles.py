@@ -60,7 +60,11 @@ def group_words_into_chunks(
     while i < len(word_boundaries):
         # Determine initial chunk size.
         remaining = len(word_boundaries) - i
-        chunk_size = min(words_per_unit, remaining)
+        # Use a tight two-word opening beat, then slightly calmer three-word
+        # groups for the body. This keeps the hook punchy without making the
+        # entire narration feel mechanically fragmented.
+        target_words = 2 if i == 0 else max(3, words_per_unit)
+        chunk_size = min(target_words, remaining)
 
         # Build the candidate chunk text.
         candidate_words = [w.word for w in word_boundaries[i : i + chunk_size]]
@@ -94,7 +98,7 @@ _ASS_FORMAT_LINE = (
     "Alignment, MarginL, MarginR, MarginV, Encoding"
 )
 _ASS_STYLE_LINE = (
-    "Style: Default,{font},{font_size},&H00FFFFFF,&H000000FF,"
+    "Style: Default,{font},{font_size},&H00FFFFFF,&H0000D7FF,"
     "&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,"
     "{outline},{shadow},2,{margin_x},{margin_x},{margin_bottom},1"
 )
@@ -148,7 +152,13 @@ def build_ass_content(
             .replace("\\", "\\\\")
             .replace("\n", "\\N")
         )
-        dialogue_lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}")
+        # The opening beat gets a stronger color and pop; body captions retain
+        # a restrained entrance while timing remains sourced from Edge events.
+        if not dialogue_lines:
+            animated_text = "{\\c&H0000D7FF&\\t(0,140,\\fscx112\\fscy112)}" + text
+        else:
+            animated_text = "{\\t(0,120,\\fscx108\\fscy108)}" + text
+        dialogue_lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{animated_text}")
 
     return header + "\n".join(dialogue_lines) + "\n"
 

@@ -1,0 +1,15 @@
+{
+  "name": "ralph-loop",
+  "version": "1.0.0",
+  "description": "Autonomous iterative development loop system for Antigravity with state persistence and goal convergence.",
+  "author": {
+    "name": "Ralph Loop Community"
+  },
+  "keywords": [
+    "ralph-loop",
+    "antigravity",
+    "autonomous-loop",
+    "iteration",
+    "self-correction"
+  ]
+}

@@ -50,7 +50,11 @@ class Settings(BaseSettings):
         max_length=300,
     )
     shorts_style: str = Field(
-        default="Curious, clear, factual, upbeat; no sensational or unsupported claims",
+        default=(
+            "Cinematic, dark, curiosity-driven; open with a sudden shocking anomaly (0-2s); "
+            "short staccato sentences (max 10 words); no intro filler; ending seamlessly "
+            "bridges back to the opening hook"
+        ),
         min_length=3,
         max_length=500,
     )
@@ -58,9 +62,11 @@ class Settings(BaseSettings):
     min_duration_seconds: float = Field(default=40.0, ge=35.0, le=50.0)
     max_duration_seconds: float = Field(default=50.0, ge=40.0, le=60.0)
 
-    tts_voice: str = Field(default="en-US-AriaNeural", pattern=r"^[a-z]{2,3}-[A-Za-z-]+Neural$")
-    tts_rate: str = Field(default="+0%", pattern=r"^[+-]\d{1,3}%$")
-    tts_pitch: str = Field(default="+0Hz", pattern=r"^[+-]\d{1,3}Hz$")
+    tts_voice: str = Field(
+        default="en-US-ChristopherNeural", pattern=r"^[a-z]{2,3}-[A-Za-z-]+Neural$"
+    )
+    tts_rate: str = Field(default="+12%", pattern=r"^[+-]\d{1,3}%$")
+    tts_pitch: str = Field(default="-1Hz", pattern=r"^[+-]\d{1,3}Hz$")
     tts_volume: str = Field(default="+0%", pattern=r"^[+-]\d{1,3}%$")
     tts_timeout_seconds: float = Field(default=180.0, ge=10, le=600)
 
@@ -102,12 +108,12 @@ class Settings(BaseSettings):
     audio_bitrate_kbps: Literal[128, 160, 192] = 192
 
     caption_font: str = Field(default="DejaVu Sans", min_length=1, max_length=80)
-    caption_font_size: int = Field(default=76, ge=40, le=120)
-    caption_words_per_unit: int = Field(default=3, ge=1, le=6)
+    caption_font_size: int = Field(default=82, ge=40, le=120)
+    caption_words_per_unit: int = Field(default=2, ge=1, le=6)
     caption_max_chars_per_line: int = Field(default=24, ge=12, le=36)
     caption_margin_x: int = Field(default=100, ge=60, le=200)
     caption_margin_bottom: int = Field(default=380, ge=250, le=700)
-    caption_outline: int = Field(default=5, ge=2, le=10)
+    caption_outline: int = Field(default=6, ge=2, le=10)
     caption_primary_color: str = Field(default="&H00FFFFFF", pattern=r"^&H[0-9A-Fa-f]{8}$")
     caption_highlight_color: str = Field(default="&H0000D7FF", pattern=r"^&H[0-9A-Fa-f]{8}$")
 

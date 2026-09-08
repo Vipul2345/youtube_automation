@@ -1,0 +1,16 @@
+{
+  "name": "coderabbit",
+  "version": "1.0.0",
+  "description": "AI-powered automated code review, security inspection, and quality assurance plugin.",
+  "author": {
+    "name": "CodeRabbit Community"
+  },
+  "keywords": [
+    "coderabbit",
+    "code-review",
+    "security",
+    "quality",
+    "pr-audit",
+    "lint"
+  ]
+}

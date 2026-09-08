@@ -27,7 +27,7 @@ jobs:
       YOUTUBE_PRIVACY_STATUS: public
       HISTORY_BACKEND: local
       PUBLICATION_CHANNEL: ${{ vars.PUBLICATION_CHANNEL || 'youtube-channel' }}
-      PUBLICATION_SLOT: ${{ github.event.schedule || 'manual' }}
+      PUBLICATION_SLOT: ${{ github.event.schedule || 'manual' }}:${{ github.run_id }}
       OUTPUT_DIR: output
       WORK_DIR: work
       STATE_DIR: state
