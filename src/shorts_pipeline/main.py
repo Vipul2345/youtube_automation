@@ -14,6 +14,7 @@ from shorts_pipeline.config import Settings, load_settings
 from shorts_pipeline.services.editorial import validate_script
 from shorts_pipeline.services.llm import generate_script
 from shorts_pipeline.services.renderer import RenderSegment, render_video
+from shorts_pipeline.services.sketch import resolve_sketch_assets_for_sections
 from shorts_pipeline.services.stock import resolve_assets_for_section
 from shorts_pipeline.services.subtitles import write_ass_file
 from shorts_pipeline.services.tts import synthesize_to_files
@@ -111,12 +112,17 @@ async def run_pipeline(settings: Settings) -> Path:
     await write_ass_file(tts_result.word_boundaries, ass_path, settings)
 
     clips = []
-    for index, section in enumerate(script.sections):
-        clips.extend(
-            await resolve_assets_for_section(
-                section.visual_keywords, index, settings, settings.work_dir
-            )
+    if settings.visual_backend == "sketch":
+        clips = await resolve_sketch_assets_for_sections(
+            script.sections, settings, settings.work_dir
         )
+    else:
+        for index, section in enumerate(script.sections):
+            clips.extend(
+                await resolve_assets_for_section(
+                    section.visual_keywords, index, settings, settings.work_dir
+                )
+            )
     if not clips:
         raise RuntimeError("No visual clips were produced")
 

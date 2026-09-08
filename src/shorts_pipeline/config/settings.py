@@ -93,6 +93,16 @@ class Settings(BaseSettings):
     stock_max_searches_per_section: int = Field(default=4, ge=1, le=6)
     stock_max_downloads_per_section: int = Field(default=3, ge=1, le=5)
 
+    visual_backend: Literal["sketch", "stock"] = "sketch"
+    sketch_style_prompt: str = Field(
+        default=(
+            "Dark historical pencil sketch, vintage charcoal illustration, dramatic chiaroscuro "
+            "lighting, detailed line art, atmospheric, 9:16 vertical composition"
+        ),
+        min_length=3,
+        max_length=500,
+    )
+
     ffmpeg_binary: SafeText = "ffmpeg"
     ffprobe_binary: SafeText = "ffprobe"
     ffmpeg_timeout_seconds: float = Field(default=1200, ge=30, le=3600)
