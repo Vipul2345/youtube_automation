@@ -68,5 +68,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "error_type": "RuntimeError"
+  },
+  {
+    "publication_id": "pub-811ac91cc0be24dcad968f42",
+    "execution_id": "34371591478",
+    "script_hash": "ca8a3b473142de12fa35a74a559d2700738d36f3d84cfce225e565df9172050b",
+    "created_at": "2026-09-09T15:39:32.960410+00:00",
+    "stage": "failed",
+    "updated_at": "2026-09-09T15:40:12.594898+00:00",
+    "title": "The Country That Doesn't Exist #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "error_type": "RuntimeError"
   }
 ]
