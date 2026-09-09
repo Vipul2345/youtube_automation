@@ -56,5 +56,17 @@
     "updated_at": "2026-09-08T19:52:20.354907+00:00",
     "title": "Why Your Shadow Lags Behind You #Shorts",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-b8b146a2514853ebc2fc9f69",
+    "execution_id": "34338037325",
+    "script_hash": "ca16a75caaaa180c697b1cbbc48d9ec7427b687916d1a2e65a217a71c32a57b9",
+    "created_at": "2026-09-09T10:02:58.546293+00:00",
+    "stage": "failed",
+    "updated_at": "2026-09-09T10:03:35.792068+00:00",
+    "title": "Why Your Shadow Is Lying To You #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "error_type": "RuntimeError"
   }
 ]
