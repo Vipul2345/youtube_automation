@@ -80,5 +80,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "error_type": "RuntimeError"
+  },
+  {
+    "publication_id": "pub-145ba8d364eae2d3781758eb",
+    "execution_id": "34373450559",
+    "script_hash": "c7332e94e2abdd833751b31f2a67b7763f723e9f14654efabaaf9691e290b27c",
+    "created_at": "2026-09-09T15:56:26.306424+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-09T15:57:02.327522+00:00",
+    "title": "The Mirror Illusion: Your Brain is Lying to You",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "gC4adrkaSq4"
   }
 ]
