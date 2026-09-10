@@ -104,5 +104,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "ZOLX4_Fc0QM"
+  },
+  {
+    "publication_id": "pub-452cd97d24437547545e2b50",
+    "execution_id": "34510960379",
+    "script_hash": "0ee12b24d957868cf9313e9adfc36d9a6e1c6b2a049e4f7c0d5892dd982538eb",
+    "created_at": "2026-09-10T17:54:20.194327+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-10T17:55:03.974672+00:00",
+    "title": "The Brutal Truth Behind Your Favorite Fairy Tales #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "VV3Hml9Qe80"
   }
 ]
