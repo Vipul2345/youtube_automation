@@ -92,5 +92,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "gC4adrkaSq4"
+  },
+  {
+    "publication_id": "pub-7f77c1a1ef92c67f319c7db9",
+    "execution_id": "34463526954",
+    "script_hash": "953cca495027aceaedc9abda6c1f0c2f6bd0254f33d8a89def0d357b18d0267b",
+    "created_at": "2026-09-10T09:58:44.221983+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-10T09:59:19.270259+00:00",
+    "title": "The Tunguska Mystery: The Blast That Left No Trace",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "ZOLX4_Fc0QM"
   }
 ]
