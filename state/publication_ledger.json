@@ -128,5 +128,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "CFmgSy2RzXk"
+  },
+  {
+    "publication_id": "pub-d67aa024e125746cdef9af37",
+    "execution_id": "34630420704",
+    "script_hash": "5363b6f3e434c83013f1eaed7148b4746362fb42e58e5d610576e421218ca9a3",
+    "created_at": "2026-09-11T17:56:18.520310+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-11T17:57:05.062570+00:00",
+    "title": "The Terrifying Secret Hidden Beneath Your Floorboards",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "3FN4XIjJkoA"
   }
 ]
