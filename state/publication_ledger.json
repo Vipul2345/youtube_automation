@@ -152,5 +152,15 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "CSkJRoj_DEQ"
+  },
+  {
+    "publication_id": "pub-def46f7c711ca33bbf4f3136",
+    "execution_id": "34693594916",
+    "script_hash": "77509f4faa1b32ed64a7951bb2080b508d77a0b61071f226c2f2cf5694da36d0",
+    "created_at": "2026-09-12T12:25:23.281142+00:00",
+    "stage": "scripted",
+    "updated_at": "2026-09-12T12:25:23.287801+00:00",
+    "title": "The Terrifying Truth About Your Reflection #Shorts",
+    "requested_visibility": "public"
   }
 ]
