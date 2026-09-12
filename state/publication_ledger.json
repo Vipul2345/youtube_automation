@@ -162,5 +162,17 @@
     "updated_at": "2026-09-12T12:25:23.287801+00:00",
     "title": "The Terrifying Truth About Your Reflection #Shorts",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-2c6cca6d366e95b192850785",
+    "execution_id": "34708234366",
+    "script_hash": "b11e9e39c5b3bbf713ffa807c0e10beae3b08c494fe756f64decbd3be64f4f8e",
+    "created_at": "2026-09-12T17:27:24.065566+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-12T17:28:25.305054+00:00",
+    "title": "The Ghost Lighthouse of Eilean Mor: A Vanishing Act",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "ZV2dzMroTm4"
   }
 ]
