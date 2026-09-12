@@ -140,5 +140,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "3FN4XIjJkoA"
+  },
+  {
+    "publication_id": "pub-7ca2fd7055447b7f60a738a6",
+    "execution_id": "34686082552",
+    "script_hash": "7057792c4b77a7cffec9551508b9b0ca280ed4f34232381f54c3c80f4de46f44",
+    "created_at": "2026-09-12T09:32:10.356762+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-12T09:32:49.854052+00:00",
+    "title": "Your Phone Knows Your Next Move Before You Do #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "CSkJRoj_DEQ"
   }
 ]
