@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     stock_max_searches_per_section: int = Field(default=4, ge=1, le=6)
     stock_max_downloads_per_section: int = Field(default=3, ge=1, le=5)
 
-    visual_backend: Literal["sketch", "stock"] = "sketch"
+    visual_backend: Literal["sketch", "stock"] = "stock"
     sketch_style_prompt: str = Field(
         default=(
             "Dark historical pencil sketch, vintage charcoal illustration, dramatic chiaroscuro "
