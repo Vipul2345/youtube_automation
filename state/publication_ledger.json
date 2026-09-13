@@ -186,5 +186,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "tSfgPw06czU"
+  },
+  {
+    "publication_id": "pub-6c5ccbee0407b035f964fb4b",
+    "execution_id": "34772325746",
+    "script_hash": "1e4976e9805f28148e7b2be6c01620dd3b1851dd149c2783408834fe3b65b32e",
+    "created_at": "2026-09-13T17:41:33.170687+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-13T17:42:45.043538+00:00",
+    "title": "The Hidden Truth About Your Fingerprints #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "wI6anVI4BsM"
   }
 ]
