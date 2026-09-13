@@ -174,5 +174,17 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "ZV2dzMroTm4"
+  },
+  {
+    "publication_id": "pub-a6bf95203f693b1ae4077a8d",
+    "execution_id": "34752050976",
+    "script_hash": "e51e04412af0ac764e0f1bc096db820dde1872d01bfc61c796aed2b1851af011",
+    "created_at": "2026-09-13T10:31:26.456019+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-13T10:32:27.974722+00:00",
+    "title": "The Village That Vanished Without A Trace #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "tSfgPw06czU"
   }
 ]
