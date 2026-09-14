@@ -208,5 +208,17 @@
     "updated_at": "2026-09-14T10:55:12.119551+00:00",
     "title": "Why Your Cat Watches You Sleep #Shorts",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-ff5649d69ba9bb06b4520a8a",
+    "execution_id": "34887923444",
+    "script_hash": "d299083ef8d5991622253f769e77b9626139aa5ccd67fe29bdbcc640a435c5fa",
+    "created_at": "2026-09-14T19:37:18.082737+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-14T19:38:14.767238+00:00",
+    "title": "Why Your Brain Might Betray You: The Capgras Delusion #Shorts",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "AXYo7cByVhE"
   }
 ]
