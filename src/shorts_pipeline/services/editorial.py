@@ -17,8 +17,22 @@ _WEAK_HOOK_START = re.compile(
 )
 
 
+_COMMON_STOPWORDS = frozenset({
+    "this", "that", "there", "what", "when", "where", "with", "from", "your",
+    "they", "them", "their", "will", "would", "about", "could", "have", "been",
+    "never", "only", "first", "more", "most", "just", "into", "some", "every",
+    "than", "then", "like", "over", "even", "because", "these", "those"
+})
+
+
+def _extract_content_words(text: str) -> set[str]:
+    """Extract lowercase alpha words with at least 3 chars excluding common stopwords."""
+    words = re.findall(r"\b[a-z]{3,}\b", text.lower())
+    return {w for w in words if w not in _COMMON_STOPWORDS}
+
+
 def validate_script(script: ShortsScript, settings: Settings, category: str) -> None:
-    """Reject unsafe/unfinished output before TTS, rendering, or publication."""
+    """Reject unsafe, contaminated, or unfinished output before TTS, rendering, or publication."""
     text = script.full_script().strip()
     if not script.youtube_title.strip() or len(text) < 80:
         raise ValueError("script must have a usable title and nonempty narration")
@@ -40,3 +54,28 @@ def validate_script(script: ShortsScript, settings: Settings, category: str) -> 
         raise ValueError(
             "script must contain a hook, exactly three narrative beats, and a complete ending"
         )
+
+    # ── Semantic Coherence Quality Gate ────────────────────────────────────
+    # Prevent hallucinations where hook contradicts or is completely disjoint
+    # from the title and core subject (e.g. Tunguska comet with shadow killer hook).
+    hook_terms = _extract_content_words(script.hook)
+    title_terms = _extract_content_words(script.youtube_title)
+    body_terms = _extract_content_words(" ".join(s.text for s in script.sections))
+
+    shares_title = bool(hook_terms & title_terms)
+    body_overlap_count = len(hook_terms & body_terms)
+
+    # If the hook shares no content terms with the title AND fewer than 2 with the body,
+    # the LLM hallucinated a disconnected hook from a different context.
+    if not shares_title and body_overlap_count < 2:
+        raise ValueError(
+            "hook lacks semantic coherence with the video title and story body; "
+            f"hook terms={sorted(hook_terms)[:5]}, title terms={sorted(title_terms)[:5]}"
+        )
+
+    # ── Clean Outro & Terminal Punctuation ─────────────────────────────────
+    if not text.endswith((".", "!", "?")):
+        raise ValueError("script must terminate cleanly on valid sentence punctuation")
+    if text.endswith(("...", "--", ",", ";", ":")):
+        raise ValueError("script has trailing punctuation or cut-off fragment artifacts")
+

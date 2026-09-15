@@ -43,6 +43,7 @@ async def render_video(
     ass_path: Path,
     segments: list[RenderSegment],
     settings: Settings,
+    total_duration: float | None = None,
 ) -> Path:
     """Render the final video by composing audio, captions, and stock clips.
 
@@ -52,6 +53,7 @@ async def render_video(
         ass_path: Path to the ASS subtitle file.
         segments: Ordered visual segments to compose.
         settings: Pipeline settings (binaries, resolutions, etc.).
+        total_duration: Explicit render duration in seconds (defaults to sum of segment durations).
 
     Returns:
         The *output_path* on success.
@@ -67,14 +69,23 @@ async def render_video(
     width = settings.video_width
     height = settings.video_height
     fps = settings.video_fps
+    target_render_duration = total_duration or sum(s.duration for s in segments)
 
     # ── Build inputs list ──────────────────────────────────────────────
+    # Deduplicate clip file inputs to avoid redundant decoders and file handle leaks
+    unique_clips: list[Path] = []
+    clip_to_input_idx: dict[Path, int] = {}
     input_args: list[str] = []
+
     for seg in segments:
         if not seg.clip_path.exists():
             raise FileNotFoundError(f"Stock clip not found: {seg.clip_path}")
-        input_args.extend(["-stream_loop", "-1", "-i", str(seg.clip_path)])
+        if seg.clip_path not in clip_to_input_idx:
+            clip_to_input_idx[seg.clip_path] = len(unique_clips)
+            unique_clips.append(seg.clip_path)
+            input_args.extend(["-stream_loop", "-1", "-i", str(seg.clip_path)])
 
+    audio_input_idx = len(unique_clips)
     audio_args = ["-i", str(audio_path)]
 
     # ── Build video filtergraph ────────────────────────────────────────
@@ -82,13 +93,38 @@ async def render_video(
     concat_inputs: list[str] = []
 
     for idx, seg in enumerate(segments):
+        in_idx = clip_to_input_idx[seg.clip_path]
         label = f"v{idx}"
+        seek_expr = (
+            f"trim=start={seg.seek_point:.3f}:duration={seg.duration:.3f},"
+            if seg.seek_point > 0
+            else f"trim=duration={seg.duration:.3f},"
+        )
+
+        # Dynamic camera motion across cuts to keep visual pacing active (The 2.5s rule)
+        motion_style = idx % 3
+        dur_safe = max(0.1, seg.duration)
+        if motion_style == 0:
+            scale_crop = (
+                f"scale=w=1.06*{width}:h=1.06*{height}:force_original_aspect_ratio=increase,"
+                f"crop={width}:{height}:'(in_w-{width})/2+((in_w-{width})/2)*(t/{dur_safe:.3f}-0.5)':'(in_h-{height})/2',"
+            )
+        elif motion_style == 1:
+            scale_crop = (
+                f"scale=w=1.08*{width}:h=1.08*{height}:force_original_aspect_ratio=increase,"
+                f"crop={width}:{height}:'(in_w-{width})*(t/{dur_safe:.3f})':'(in_h-{height})/2',"
+            )
+        else:
+            scale_crop = (
+                f"scale=w=1.06*{width}:h=1.06*{height}:force_original_aspect_ratio=increase,"
+                f"crop={width}:{height}:'(in_w-{width})/2-((in_w-{width})/2)*(t/{dur_safe:.3f}-0.5)':'(in_h-{height})/2',"
+            )
+
         chain = (
-            f"[{idx}:v]"
-            f"scale=w={width}:h={height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height},"
+            f"[{in_idx}:v]"
+            f"{scale_crop}"
             f"fps={fps},"
-            f"trim=duration={seg.duration},"
+            f"{seek_expr}"
             f"setpts=PTS-STARTPTS[{label}]"
         )
         filter_parts.append(chain)
@@ -100,20 +136,20 @@ async def render_video(
     video_filtergraph = ";\n".join(filter_parts)
 
     # ── Build audio filter ─────────────────────────────────────────────
-    # Audio is the last input (index = num_segments).
+    # Layer an atmospheric low-frequency tension rumble ducked cleanly under speech
     audio_filtergraph = (
-        f"[{num_segments}:a]loudnorm=I=-14:LRA=1:TP=-1.5,"
-        f"aformat=sample_rates=44100:channel_layouts=stereo[a]"
+        f"aevalsrc='0.025*sin(2*PI*55*t)+0.015*sin(2*PI*110*t+sin(2*PI*0.3*t))+0.01*sin(2*PI*165*t)':"
+        f"d={target_render_duration:.3f}:s=44100[bg]; "
+        f"[{audio_input_idx}:a]loudnorm=I=-14:LRA=1:TP=-1.5,"
+        f"aformat=sample_rates=44100:channel_layouts=stereo[voice]; "
+        f"[bg]volume=0.22,lowpass=f=450[bg_low]; "
+        f"[voice][bg_low]amix=inputs=2:duration=first:dropout_transition=2[a]"
     )
 
-    # FFmpeg's subtitles filter has its own escaping rules, even though the
-    # outer subprocess invocation uses an argument array. Keep subtitle burn-in
-    # in the same filter graph as the mapped video stream; applying -vf after
-    # -filter_complex is rejected by FFmpeg for this graph.
+    # Subtitle burn-in filter
     subtitle_path = ass_path.as_posix().replace(":", "\\:").replace("'", "\\'")
     subtitle_filter = f"[v]subtitles=filename='{subtitle_path}'[vout]"
 
-    # Combine into one filter_complex.
     full_filtergraph = f"{video_filtergraph}; {audio_filtergraph}; {subtitle_filter}"
 
     # ── Assemble FFmpeg command ────────────────────────────────────────
@@ -151,7 +187,7 @@ async def render_video(
         "-threads",
         str(settings.ffmpeg_threads),
         "-t",
-        f"{settings.target_duration_seconds:.3f}",
+        f"{target_render_duration:.3f}",
         str(output_path),
     ]
 
@@ -190,7 +226,7 @@ async def render_video(
         raise TransientError("Rendered output is missing or too small")
 
     # ── Validate with ffprobe ──────────────────────────────────────────
-    await _validate_rendered(output_path, settings)
+    await _validate_rendered(output_path, settings, expected_duration=target_render_duration)
 
     logger.info(
         "Render complete: %s (%.1f MB)",
@@ -203,7 +239,9 @@ async def render_video(
 # ── Validation ────────────────────────────────────────────────────────────
 
 
-async def _validate_rendered(path: Path, settings: Settings) -> None:
+async def _validate_rendered(
+    path: Path, settings: Settings, expected_duration: float | None = None
+) -> None:
     """Run ffprobe on *path* and assert expected properties."""
     cmd = [
         settings.ffprobe_binary,
@@ -270,7 +308,7 @@ async def _validate_rendered(path: Path, settings: Settings) -> None:
 
     fmt = data.get("format", {})
     out_duration = float(fmt.get("duration", 0) or 0)
-    expected = settings.target_duration_seconds
+    expected = expected_duration or settings.target_duration_seconds
     tolerance = 2.0
     if abs(out_duration - expected) > tolerance:
         logger.warning(

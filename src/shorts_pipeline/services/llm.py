@@ -107,11 +107,24 @@ class ShortsScript(BaseModel):
         return [t.removeprefix("#").strip() for t in v]
 
     def full_script(self) -> str:
-        """Return the complete spoken narrative as a single string."""
-        parts = [self.hook]
-        parts.extend(s.text for s in self.sections)
-        parts.append(self.cta)
-        return " ".join(parts)
+        """Return the complete spoken narrative as a clean, properly punctuated string."""
+        cta = self.cta.strip()
+        hook = self.hook.strip()
+        # If the LLM mistakenly appended the opening hook directly into the CTA
+        if hook.casefold() in cta.casefold():
+            idx = cta.casefold().find(hook.casefold())
+            cta = cta[:idx].strip()
+
+        parts = [hook]
+        parts.extend(s.text.strip() for s in self.sections)
+        if cta:
+            parts.append(cta)
+        script = " ".join(p for p in parts if p).strip()
+        while script.endswith("..."):
+            script = script[:-3].strip()
+        if not script.endswith((".", "!", "?")):
+            script += "."
+        return script
 
 
 # ── Category mapping ──────────────────────────────────────────────────────
@@ -138,30 +151,47 @@ def map_category(category: str) -> str:
 
 # ── Prompt construction ────────────────────────────────────────────────────
 
-SYSTEM_INSTRUCTION = """You are a YouTube Shorts scriptwriter. You generate a single short-form
-video script approximately 40–50 seconds of spoken audio (roughly 100–130 words).
+SYSTEM_INSTRUCTION = """You are an elite YouTube Shorts scriptwriter and retention director.
+You write punchy, high-retention short-form video scripts of 40–48 seconds of spoken audio
+(approximately 105–125 words).
 
 Your response MUST be valid JSON matching the provided schema. Every field is required.
 
-1. Start with a STRONG pattern-interrupt hook in the first 1â€“2 seconds. The hook must
-1. Start with a STRONG pattern-interrupt hook in the first 1–2 seconds. The hook must
-   and make a viewer want the next sentence. Keep it to 18 words or fewer. Do not begin
-   with greetings, context, "did you know", "here is", or a generic question.
-   "did you know", or a generic question.
-2. Include exactly 3 useful facts, insights, or narrative beats as separate sections:
-   setup, surprising detail, and payoff/reveal. Each section should be 20–45 words.
-3. Each section must provide spoken text AND 1–6 visual search keywords for stock footage.
-4. End with a concise call-to-action (like, subscribe, comment).
-5. Keep the tone energetic, concise, vivid, and advertiser-friendly; use short sentences
-   and natural spoken transitions; avoid graphic violence,
-   hateful content, and unsupported claims.
-6. The YouTube title must be under 100 characters and optimized for Shorts discovery.
-7. Include #Shorts in the description.
-8. Provide relevant YouTube tags (no # prefix).
-9. Choose one category from: Education, Entertainment, Music, Gaming, Howto, News, Sports, Travel.
+CORE RETENTION & STRUCTURAL RULES:
+1. HOOK INTEGRITY (0–2s): Start with a topic-grounded pattern-interrupt hook (<18 words).
+   - If the topic is History/Mysteries, the hook MUST state a real historical anomaly,
+     date, place, or event (e.g. "In 1908, a shockwave flattened 80 million trees in Siberia.").
+     NEVER use unrelated horror tropes like "Your shadow is trying to kill you".
+   - If the topic is Psychology, state a startling behavioral paradox or cognitive bias.
+   - The hook MUST directly match the video title and the narrative body.
+   - Never start with generic filler ("did you know", "here is", "what if I told you").
 
-IMPORTANT: Do NOT repeat or substantially overlap topics from the recent history provided.
-If you cannot generate a sufficiently different topic, indicate an error in the response."""
+2. THREE NARRATIVE BEATS (20–40 words each):
+   - Section 1 (Setup): Establish the strange phenomenon or mystery with crisp facts.
+   - Section 2 (Twist / Detail): Reveal a bizarre detail or counter-intuitive mechanism.
+   - Section 3 (Payoff / Explanation): Deliver the fascinating resolution or true cause.
+   - Use short, staccato sentences (under 12 words per sentence) for rapid pacing.
+
+3. SEAMLESS CIRCULAR LOOPING:
+   - The final sentence (the CTA/outro) MUST be an open lead-in or bridge clause that
+     naturally transitions back into the first words of the opening hook when the video replays.
+   - Example:
+     If Hook is: "In 1908, a shockwave flattened 80 million trees in Siberia."
+     The CTA should end with: "Which is why researchers are still baffled by how..."
+     When YouTube replays the Short from 0:00, it sounds like one continuous sentence.
+   - CRITICAL: Do NOT copy, repeat, or append the hook text into the CTA!
+     The YouTube app automatically replays the video from the beginning.
+
+4. VISUAL B-ROLL KEYWORDS:
+   - Provide 2–4 concrete, highly searchable physical keywords per section for stock footage
+     (e.g., "siberian taiga aerial", "comet night sky", "fallen pine trees").
+
+5. METADATA:
+   - The YouTube title must be under 100 characters and optimized for curiosity and Shorts feed.
+   - Include #Shorts in description.
+   - Provide 5–12 relevant tags without '#' prefix.
+
+IMPORTANT: Do NOT repeat or substantially overlap topics from the recent history provided."""
 
 
 def build_generation_prompt(
@@ -171,15 +201,29 @@ def build_generation_prompt(
     recent_topics: list[str] | None = None,
 ) -> str:
     """Build the user prompt for Gemini generation."""
+    topic_guideline = ""
+    if "History" in topic:
+        topic_guideline = (
+            "CRITICAL: Ground this entirely in a real historical event, expedition, or mystery. "
+            "The hook MUST state the specific historical incident, year, or location. "
+            "Do NOT use generic horror or unrelated psychological fiction."
+        )
+    elif "Psychology" in topic:
+        topic_guideline = (
+            "CRITICAL: Ground this in real cognitive science, perception quirks, or psychology. "
+            "The hook must state a real behavioral phenomenon or mental glitch."
+        )
+
     parts = [
         f"Topic area: {topic}",
         f"Style: {style}",
-        f"Target duration: {target_duration:.0f} seconds.",
+        f"Target duration: {target_duration:.0f} seconds (roughly 110-125 words).",
         "",
-        "Generate a complete YouTube Shorts script and metadata as a JSON object. Make the hook "
-        "the strongest line in the script: it must stop a scrolling viewer immediately, "
-        "without clickbait or unsupported claims. Use exactly three sections, and make the "
-        "third section deliver a clear payoff rather than another unrelated fact.",
+        topic_guideline,
+        "",
+        "Generate a complete YouTube Shorts script and metadata as a JSON object.",
+        "Ensure the hook directly connects to the title and story, and make the ending loop "
+        "seamlessly back into the opening hook line.",
     ]
     if recent_topics:
         parts.append(

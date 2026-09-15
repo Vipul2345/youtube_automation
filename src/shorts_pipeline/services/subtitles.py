@@ -7,6 +7,7 @@ with high-contrast mobile captions grouped into readable 2–4 word chunks.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,12 +43,26 @@ class CaptionChunk:
     end_seconds: float
 
 
+_HIGHLIGHT_REGEX = re.compile(
+    r"\b(?:\d+(?:,\d+)*(?:\.\d+)?(?:k|m|b|th|st|nd|rd|%)?|[A-Z]{3,})\b"
+)
+
+
+def _highlight_keywords(text: str, highlight_color: str) -> str:
+    """Highlight numbers, metrics, and emphatic capitalized words."""
+    def _repl(match: re.Match) -> str:
+        word = match.group(0)
+        return f"{{\\c{highlight_color}}}{word}{{\\c&H00FFFFFF&}}"
+
+    return _HIGHLIGHT_REGEX.sub(_repl, text)
+
+
 def group_words_into_chunks(
     word_boundaries: list[WordBoundary],
-    words_per_unit: int = 3,
-    max_chars_per_line: int = 24,
+    words_per_unit: int = 2,
+    max_chars_per_line: int = 22,
 ) -> list[CaptionChunk]:
-    """Group *word_boundaries* into 2–4 word display chunks.
+    """Group *word_boundaries* into punchy 1–2 word mobile display chunks.
 
     Respects *max_chars_per_line*; any chunk exceeding it is split further.
     Adjacent chunks abut without gaps or overlap.
@@ -58,13 +73,9 @@ def group_words_into_chunks(
     chunks: list[CaptionChunk] = []
     i = 0
     while i < len(word_boundaries):
-        # Determine initial chunk size.
         remaining = len(word_boundaries) - i
-        # Use a tight two-word opening beat, then slightly calmer three-word
-        # groups for the body. This keeps the hook punchy without making the
-        # entire narration feel mechanically fragmented.
-        target_words = 2 if i == 0 else max(3, words_per_unit)
-        chunk_size = min(target_words, remaining)
+        target_words = max(1, min(words_per_unit, remaining))
+        chunk_size = target_words
 
         # Build the candidate chunk text.
         candidate_words = [w.word for w in word_boundaries[i : i + chunk_size]]
@@ -129,7 +140,7 @@ def build_ass_content(
     chunks: list[CaptionChunk],
     settings: Settings,
 ) -> str:
-    """Build the full ASS file content as a string."""
+    """Build the full ASS file content as a string with kinetic pops and keyword highlights."""
     header = ASS_HEADER_TEMPLATE.format(
         width=settings.video_width,
         height=settings.video_height,
@@ -141,23 +152,34 @@ def build_ass_content(
         margin_bottom=settings.caption_margin_bottom,
     )
 
+    highlight_color = (
+        settings.caption_highlight_color
+        if settings.caption_highlight_color.endswith("&")
+        else f"{settings.caption_highlight_color}&"
+    )
+
     dialogue_lines: list[str] = []
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
         start = _format_ass_time(chunk.start_seconds)
         end = _format_ass_time(chunk.end_seconds)
         # Escape special ASS characters in the text: {}, \, and newlines.
-        text = (
+        escaped_text = (
             chunk.text.replace("{", "\\{")
             .replace("}", "\\}")
             .replace("\\", "\\\\")
             .replace("\n", "\\N")
         )
-        # The opening beat gets a stronger color and pop; body captions retain
-        # a restrained entrance while timing remains sourced from Edge events.
-        if not dialogue_lines:
-            animated_text = "{\\c&H0000D7FF&\\t(0,140,\\fscx112\\fscy112)}" + text
+
+        highlighted_text = _highlight_keywords(escaped_text, highlight_color)
+
+        # Kinetic entrance pop: quick scale up on entry
+        if idx == 0:
+            animated_text = (
+                f"{{\\c{highlight_color}\\t(0,100,\\fscx112\\fscy112)}}" + highlighted_text
+            )
         else:
-            animated_text = "{\\t(0,120,\\fscx108\\fscy108)}" + text
+            animated_text = "{\\t(0,80,\\fscx108\\fscy108)}" + highlighted_text
+
         dialogue_lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{animated_text}")
 
     return header + "\n".join(dialogue_lines) + "\n"

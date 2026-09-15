@@ -126,22 +126,35 @@ async def run_pipeline(settings: Settings) -> Path:
     if not clips:
         raise RuntimeError("No visual clips were produced")
 
-    # The configured target is authoritative.  TTS can run longer than the
-    # requested duration (for example when the generated script is verbose),
-    # but allowing that value to drive the render can create an upload-invalid
-    # video longer than YouTube Shorts' 60-second limit.
-    total_duration = settings.target_duration_seconds
-    # Give the opening visual a quick 4-second beat, then let the explanatory
-    # visuals breathe evenly. This creates an immediate pattern interrupt while
-    # preserving the configured total duration.
-    opening_duration = min(4.0, total_duration * 0.12)
-    if len(clips) == 1:
-        durations = [total_duration]
+    # Synchronize render duration directly to actual TTS speech audio length so the
+    # video finishes completely on the final word with zero mid-word truncation.
+    # Add a tiny 0.06s pad so the final consonant decays naturally.
+    total_duration = min(58.0, round(tts_result.duration_seconds + 0.06, 2))
+
+    # Apply the 2.5s–3.5s B-roll pacing rule for mobile retention.
+    # Aim for ~2.8s per visual cut across the video.
+    target_cut_duration = 2.8
+    num_cuts = max(len(clips), max(1, round(total_duration / target_cut_duration)))
+
+    # Opening cut: quick punchy 2.0s hook visual beat
+    opening_cut = min(2.0, total_duration * 0.06)
+    if num_cuts == 1:
+        cut_durations = [total_duration]
     else:
-        body_duration = (total_duration - opening_duration) / (len(clips) - 1)
-        durations = [opening_duration] + [body_duration] * (len(clips) - 1)
-    segments = [RenderSegment(clip.file_path, durations[index]) for index, clip in enumerate(clips)]
-    await render_video(output_path, audio_path, ass_path, segments, settings)
+        rem_dur = (total_duration - opening_cut) / (num_cuts - 1)
+        cut_durations = [opening_cut] + [rem_dur] * (num_cuts - 1)
+
+    segments: list[RenderSegment] = []
+    for i in range(num_cuts):
+        clip = clips[i % len(clips)]
+        dur = cut_durations[i]
+        # Offset seek_point for repeated clips so viewer sees distinct camera action
+        seek = round((i // len(clips)) * target_cut_duration, 2)
+        segments.append(RenderSegment(clip_path=clip.file_path, duration=dur, seek_point=seek))
+
+    await render_video(
+        output_path, audio_path, ass_path, segments, settings, total_duration=total_duration
+    )
     if intent is not None:
         intent = record(settings.state_dir, intent, "rendered", output_path=str(output_path))
     await validate_video(output_path, settings)

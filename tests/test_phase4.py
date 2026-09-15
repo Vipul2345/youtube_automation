@@ -229,3 +229,63 @@ def test_credentials_handles_expired_refresh_token(monkeypatch, tmp_path: Path):
     with pytest.raises(RuntimeError, match="YouTube OAuth refresh token expired or revoked"):
         uploader._credentials(settings)
 
+
+def test_editorial_gate_rejects_disconnected_hook(tmp_path: Path):
+    script = ShortsScript(
+        hook="Your shadow is secretly planning your demise.",
+        sections=[
+            ScriptSection(
+                heading="Setup",
+                text=(
+                    "In 1908 an enormous mysterious explosion tore across the deep Siberian "
+                    "wilderness instantly flattening eighty million ancient pine trees."
+                ),
+                visual_keywords=["forest", "explosion"],
+            ),
+            ScriptSection(
+                heading="Detail",
+                text=(
+                    "Witnesses hundreds of miles away felt intense scorching heat and seismic "
+                    "shockwaves rolling violently through the frozen northern tundra."
+                ),
+                visual_keywords=["tundra", "shockwave"],
+            ),
+            ScriptSection(
+                heading="Payoff",
+                text=(
+                    "Scientists still passionately debate whether a rogue comet fragment or "
+                    "meteor airburst triggered the historic Tunguska catastrophe."
+                ),
+                visual_keywords=["comet", "meteor"],
+            ),
+        ],
+        cta="Subscribe for more strange historical mysteries.",
+        youtube_title="The 1908 Siberian Comet Blast",
+        youtube_description="The bizarre mystery of the Tunguska explosion. #Shorts",
+        youtube_tags=["history", "tunguska", "comet"],
+    )
+    settings = Settings(project_root=tmp_path)
+    with pytest.raises(ValueError, match="semantic coherence"):
+        validate_script(script, settings, "Bite-Sized History / Mysteries")
+
+
+def test_kinetic_subtitles_highlight_numbers(tmp_path: Path):
+    from shorts_pipeline.services.subtitles import (
+        WordBoundary,
+        build_ass_content,
+        group_words_into_chunks,
+    )
+
+    boundaries = [
+        WordBoundary("In", 0.0, 0.2, 0, 2000000),
+        WordBoundary("1908", 0.2, 0.4, 2000000, 4000000),
+        WordBoundary("blast", 0.6, 0.3, 6000000, 3000000),
+        WordBoundary("flattened", 0.9, 0.4, 9000000, 4000000),
+        WordBoundary("trees", 1.3, 0.3, 13000000, 3000000),
+    ]
+    chunks = group_words_into_chunks(boundaries, words_per_unit=2)
+    ass_text = build_ass_content(chunks, Settings(project_root=tmp_path))
+    assert "\\c&H0000D7FF&1908" in ass_text or "\\c" in ass_text
+    assert len(chunks) == 3
+
+
