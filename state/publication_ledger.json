@@ -220,5 +220,15 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "AXYo7cByVhE"
+  },
+  {
+    "publication_id": "pub-00b9ebc5c390da89f3479b3e",
+    "execution_id": "35007789006",
+    "script_hash": "c592a1b6b48f2b6d5fb31d72ff51684f4c17844e05e828a57b2cce1bfb7f2968",
+    "created_at": "2026-09-15T18:30:13.321244+00:00",
+    "stage": "scripted",
+    "updated_at": "2026-09-15T18:30:13.324716+00:00",
+    "title": "The Lost Expedition: What Happened to Colonel Fawcett?",
+    "requested_visibility": "public"
   }
 ]
