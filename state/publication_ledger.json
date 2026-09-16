@@ -230,5 +230,15 @@
     "updated_at": "2026-09-15T18:30:13.324716+00:00",
     "title": "The Lost Expedition: What Happened to Colonel Fawcett?",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-efe5596561183acfea15d252",
+    "execution_id": "35083777473",
+    "script_hash": "9c29aebf62640539711fdf45e3db890846bd5a5e6ad00b433f16475948336ccb",
+    "created_at": "2026-09-16T10:13:47.405679+00:00",
+    "stage": "scripted",
+    "updated_at": "2026-09-16T10:13:47.408440+00:00",
+    "title": "The Ghost Ship: What Happened to the Mary Celeste? #Shorts",
+    "requested_visibility": "public"
   }
 ]
