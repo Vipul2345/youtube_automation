@@ -240,5 +240,17 @@
     "updated_at": "2026-09-16T10:13:47.408440+00:00",
     "title": "The Ghost Ship: What Happened to the Mary Celeste? #Shorts",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-b9326371a6cf36dbed769516",
+    "execution_id": "35134461527",
+    "script_hash": "20c5ff1a32375a78c343374c93eb8ad62d486c24d76425564724293092f64943",
+    "created_at": "2026-09-16T18:27:37.191092+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-16T18:29:22.781375+00:00",
+    "title": "The Ghost Ship That Vanished: The Mystery of the Mary Celeste",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "t_I3jQWOyd4"
   }
 ]
