@@ -272,5 +272,17 @@
     "updated_at": "2026-09-17T18:35:00.675862+00:00",
     "title": "Why You Wouldn't Help: The Dark Truth of the Bystander Effect",
     "requested_visibility": "public"
+  },
+  {
+    "publication_id": "pub-5c4542a2b2b289da25a21230",
+    "execution_id": "35332376519",
+    "script_hash": "bb97aaa3368b76e0c1edd832b5b64bdc9eea74b3ea0a7a7f667365b32270e3c3",
+    "created_at": "2026-09-18T10:00:03.051942+00:00",
+    "stage": "published",
+    "updated_at": "2026-09-18T10:01:28.529059+00:00",
+    "title": "The CIA Experiment That Drove A Town Insane",
+    "requested_visibility": "public",
+    "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
+    "youtube_video_id": "rStGSsP0BB8"
   }
 ]
