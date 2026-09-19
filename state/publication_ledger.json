@@ -284,5 +284,15 @@
     "requested_visibility": "public",
     "output_path": "/home/runner/work/youtube_automation/youtube_automation/output/short.mp4",
     "youtube_video_id": "rStGSsP0BB8"
+  },
+  {
+    "publication_id": "pub-4b4a03f24015ec6693ae0b8c",
+    "execution_id": "35435356350",
+    "script_hash": "da893197082ebc7b9f5dfcec63dd576c73b27a47f275352ade146ed24fe9a1c9",
+    "created_at": "2026-09-19T09:41:27.941164+00:00",
+    "stage": "scripted",
+    "updated_at": "2026-09-19T09:41:27.945725+00:00",
+    "title": "The Science of Shared Hallucinations: Why Your Brain Sees Ghosts",
+    "requested_visibility": "public"
   }
 ]
